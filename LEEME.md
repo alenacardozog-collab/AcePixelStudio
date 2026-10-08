@@ -42,7 +42,7 @@ Cada herramienta se resalta al pasar el mouse y, si te quedás quieto medio segu
 
 Los paneles se despegan arrastrando la barrita de puntitos que tienen arriba, se mueven y agrandan como ventanas, y se vuelven a pegar llevándolos a su costado o con doble clic en su barra. El borde interno de un panel pegado cambia su ancho. En el Mapa, las pestañas Capas, Propiedades, Assets y Mapa se despegan una por una (arrastrándolas o con doble clic). El botón **Espacio** de la barra de arriba lista todo y tiene **Restablecer todo**; de emergencia, **Ctrl + Mayús + 0**.
 
-El manual completo con imágenes está en `docs/Manual_Taller_CastleKnight.pdf`.
+El manual completo con imágenes está en `Manual_Taller_CastleKnight.pdf`.
 
 ## Dónde queda cada cosa
 

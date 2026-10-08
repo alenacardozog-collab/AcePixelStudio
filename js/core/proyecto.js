@@ -246,3 +246,17 @@ CK.volverA = async json => { const p = JSON.parse(json), imgs = CK.img; await CK
 setInterval(() => { if (CK.P && CK._sucio && !CK._ocupado) CK.guardar({ silencio: true }).then(ok => ok && CK.estadoDer('Autoguardado ' + new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }))); }, 60000);
 window.addEventListener('beforeunload', e => { if (CK.P && CK._sucio) { CK.guardar({ silencio: true }); e.preventDefault(); e.returnValue = ''; } });
 document.addEventListener('visibilitychange', () => { if (document.hidden && CK.P && CK._sucio) CK.guardar({ silencio: true }); });
+
+/** Elimina un proyecto guardado (del navegador y de la carpeta del editor). Pregunta antes y ofrece bajar una copia. */
+CK.eliminarProyecto = async p => {
+  const dir = CK.fs.dir('editor'), nombre = p.nombre || p.slug;
+  if (p.disco && !dir) { CK.aviso('Este proyecto está guardado en la carpeta del editor. Conectala primero para poder eliminarlo.', 'info', 5000); return false; }
+  const r = await CK.ventana({ titulo: 'Eliminar proyecto', ancho: 470, cuerpo: CK.h('div', CK.h('p', '¿Eliminar "' + nombre + '"?'), CK.h('p.ayuda-txt', 'Se borran su guía de estilo, assets, mapas, NPC, misiones, efectos y versiones guardadas' + (p.disco ? ', incluida su carpeta trabajo\\' + p.slug : '') + '. No se puede deshacer. Los archivos del juego no se tocan.')), botones: [{ txt: 'Cancelar', valor: false }, { txt: 'Bajar copia y eliminar', valor: 'copia' }, { txt: 'Eliminar', cls: 'peligro', valor: 'si' }] });
+  if (!r) return false;
+  if (r === 'copia') { try { const abierto = CK.P; if (!CK.P || CK.slug(CK.P.nombre) !== p.slug) await CK.abrir(p.slug, true); CK.descargar(CK.empaquetar(), p.slug + '.ckproj'); } catch (e) { CK.aviso('No pude armar la copia, así que no eliminé nada: ' + e.message, 'error', 6000); return false; } }
+  if (CK.P && CK.slug(CK.P.nombre) === p.slug) { CK.P = null; CK.img = {}; CK._sucio = false; CK.hist.limpiar(); }
+  await CK.db.del('proyectos', p.slug); for (const k of await CK.db.keys('imagenes')) if (String(k).indexOf(p.slug + '/') === 0) await CK.db.del('imagenes', k);
+  await CK.db.del('ajustes', 'versiones_' + p.slug); if ((await CK.db.get('ajustes', 'ultimo')) === p.slug) await CK.db.del('ajustes', 'ultimo');
+  if (dir && p.disco) { try { const t = await CK.fs.sub(dir, 'trabajo'); await t.removeEntry(p.slug, { recursive: true }); } catch (e) { CK.aviso('Lo saqué del navegador, pero no pude borrar la carpeta trabajo\\' + p.slug + ': ' + e.message, 'error', 7000); } }
+  CK.emit('proyecto'); CK.emit('sucio', false); if (CK.ir) CK.ir('inicio'); CK.aviso('Proyecto eliminado: ' + nombre); return true;
+};

@@ -224,9 +224,17 @@
   /** Bordes duros: lo semitransparente pasa a opaco o a nada. */
   PIX.hardenAlpha = (im, thr = 110) => { const o = PIX.clone(im); for (let i = 3; i < o.d.length; i += 4) o.d[i] = o.d[i] >= thr ? 255 : 0; return o; };
   /** Quita el fondo liso: rellena desde los bordes todo lo parecido al color de las esquinas. */
-  PIX.removeBg = (im, tol = 24, color) => {
+  /** Colores de fondo de una imagen: los que dominan su marco (uno liso, o los dos de un "falso transparente" a cuadros). */
+  PIX.bgColors = im => {
+    const w = im.w, h = im.h, m = new Map(), add = (x, y) => { const c = PIX.get(im, x, y); if (c[3] <= 8) return; const k = (c[0] >> 4) << 8 | (c[1] >> 4) << 4 | (c[2] >> 4); const e = m.get(k) || [0, 0, 0, 0]; e[0] += c[0]; e[1] += c[1]; e[2] += c[2]; e[3]++; m.set(k, e); };
+    for (let x = 0; x < w; x++) { add(x, 0); add(x, h - 1); if (h > 4) { add(x, 1); add(x, h - 2); } } for (let y = 0; y < h; y++) { add(0, y); add(w - 1, y); if (w > 4) { add(1, y); add(w - 2, y); } }
+    const l = [...m.values()].sort((a, b) => b[3] - a[3]), tot = l.reduce((t, e) => t + e[3], 0); if (!tot) return [];
+    return l.filter((e, i) => i === 0 || e[3] / tot > 0.12).slice(0, 3).map(e => [Math.round(e[0] / e[3]), Math.round(e[1] / e[3]), Math.round(e[2] / e[3])]);
+  };
+  /** Quita el fondo liso. o = { huecos: borra también el fondo encerrado dentro del dibujo, halo: píxeles de borde contaminados a quitar (0-4) }. */
+  PIX.removeBg = (im, tol = 24, color, opt = {}) => {
     const o = PIX.clone(im), w = im.w, h = im.h, seen = new Uint8Array(w * h), st = [];
-    const cs = color ? [PIX.hex2rgb(color)] : [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]].map(([x, y]) => PIX.get(im, x, y)).filter(c => c[3] > 8);
+    const cs = color ? [PIX.hex2rgb(color)] : PIX.bgColors(im);
     if (!cs.length) return o;
     const t2 = tol * tol * 9, near = i => cs.some(c => PIX.dist(im.d[i], im.d[i + 1], im.d[i + 2], c[0], c[1], c[2]) <= t2);
     for (let x = 0; x < w; x++) { st.push(x, (h - 1) * w + x); } for (let y = 0; y < h; y++) { st.push(y * w, y * w + w - 1); }
@@ -235,6 +243,77 @@
       if (im.d[i + 3] > 8 && !near(i)) continue;
       o.d[i + 3] = 0; const x = p % w, y = (p / w) | 0;
       if (x > 0) st.push(p - 1); if (x < w - 1) st.push(p + 1); if (y > 0) st.push(p - w); if (y < h - 1) st.push(p + w);
+    }
+    if (opt.huecos) { const t3 = t2 * 0.55; for (let p = 0; p < w * h; p++) { const i = p * 4; if (o.d[i + 3] > 8 && cs.some(c => PIX.dist(im.d[i], im.d[i + 1], im.d[i + 2], c[0], c[1], c[2]) <= t3)) o.d[i + 3] = 0; } }
+    return opt.halo ? PIX.defringe(o, cs, opt.halo) : o;
+  };
+  /** RECORTE FINO: quita un fondo liso (blanco u otro) dejando solo la figura, sin filo claro.
+      1) rellena el fondo desde los bordes de la imagen; 2) si se pide, se lleva también la sombra gris apoyada en el piso;
+      3) pela el borde: cada píxel que toca el fondo se compara con el dibujo que tiene detrás. Si es más fondo que dibujo, se va;
+         si es una mezcla, se queda pero con el color limpio del dibujo. Un contorno o una prenda clara de verdad no se tocan.
+      o = { sombra: 0-100 (cuánto gris cuenta como sombra), pasadas: 1-6, huecos: bool } */
+  PIX.matte = (im, tol = 24, color, opt = {}) => {
+    const o = PIX.clone(im), w = im.w, h = im.h, d = o.d, N = w * h, cs = color ? [PIX.hex2rgb(color)] : PIX.bgColors(im);
+    if (!cs.length) return o;
+    const B = new Uint8Array(N), t2 = tol * tol * 9;       // B: 1 = fondo
+    const dB = i => { let m = Infinity; for (const c of cs) { const q = PIX.dist(im.d[i], im.d[i + 1], im.d[i + 2], c[0], c[1], c[2]); if (q < m) m = q; } return m; };
+    const masCercano = i => { let m = Infinity, r = cs[0]; for (const c of cs) { const q = PIX.dist(im.d[i], im.d[i + 1], im.d[i + 2], c[0], c[1], c[2]); if (q < m) { m = q; r = c; } } return r; };
+    // 1) fondo conectado al marco
+    let st = []; for (let x = 0; x < w; x++) st.push(x, (h - 1) * w + x); for (let y = 0; y < h; y++) st.push(y * w, y * w + w - 1);
+    const visto = new Uint8Array(N);
+    while (st.length) { const p = st.pop(); if (visto[p]) continue; visto[p] = 1; const i = p * 4; if (im.d[i + 3] > 8 && dB(i) > t2) continue; B[p] = 1; const x = p % w, y = (p / w) | 0; if (x > 0) st.push(p - 1); if (x < w - 1) st.push(p + 1); if (y > 0) st.push(p - w); if (y < h - 1) st.push(p + w); }
+    if (opt.huecos) { const t3 = t2 * 0.55; for (let p = 0; p < N; p++) if (!B[p] && dB(p * 4) <= t3) B[p] = 1; }
+    // 2) sombra: grises claros sin color, pegados al fondo
+    if (opt.sombra > 0) {
+      // la sombra está debajo de la figura: solo se busca en su parte de abajo
+      let fy0 = h, fy1 = -1; for (let p = 0; p < N; p++) if (!B[p]) { const y = (p / w) | 0; if (y < fy0) fy0 = y; if (y > fy1) fy1 = y; } const yMin = fy0 + (fy1 - fy0) * 0.62;
+      const lumMin = 255 - opt.sombra * 1.5, fondo = cs[0], esSombra = i => { if (((i / 4 / w) | 0) < yMin) return false; const r = im.d[i], g = im.d[i + 1], b = im.d[i + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b); return mx - mn <= 22 && (r * 0.3 + g * 0.59 + b * 0.11) >= lumMin && Math.abs((r - g) - (fondo[0] - fondo[1])) < 14; };
+      st = []; for (let p = 0; p < N; p++) if (B[p]) { const x = p % w, y = (p / w) | 0; if ((x > 0 && !B[p - 1]) || (x < w - 1 && !B[p + 1]) || (y > 0 && !B[p - w]) || (y < h - 1 && !B[p + w])) st.push(p); }
+      const vs = new Uint8Array(N);
+      while (st.length) { const p = st.pop(), x = p % w, y = (p / w) | 0; for (const q of [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, y > 0 ? p - w : -1, y < h - 1 ? p + w : -1]) { if (q < 0 || B[q] || vs[q]) continue; vs[q] = 1; if (esSombra(q * 4)) { B[q] = 1; st.push(q); } } }
+    }
+    // 3) pelar el borde
+    const pasadas = opt.pasadas === undefined ? 3 : opt.pasadas, limpio = new Uint8Array(N);
+    for (let n = 0; n < pasadas; n++) {
+      const borde = []; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const p = y * w + x; if (B[p] || limpio[p]) continue; if ((x > 0 && B[p - 1]) || (x < w - 1 && B[p + 1]) || (y > 0 && B[p - w]) || (y < h - 1 && B[p + w]) || x === 0 || y === 0 || x === w - 1 || y === h - 1) borde.push(p); }
+      if (!borde.length) break; const enBorde = new Uint8Array(N); borde.forEach(p => { enBorde[p] = 1; });
+      const quitar = [], pintar = [];
+      for (const p of borde) {
+        const x = p % w, y = (p / w) | 0, i = p * 4, bg = masCercano(i), P = [d[i] - bg[0], d[i + 1] - bg[1], d[i + 2] - bg[2]];
+        // el dibujo que tiene detrás: el vecino (hasta 2 px) que no es borde y más se diferencia del fondo
+        let F = null, mejor = -1;
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue; const q = yy * w + xx; if (B[q] || enBorde[q]) continue; const j = q * 4, dq = PIX.dist(d[j], d[j + 1], d[j + 2], bg[0], bg[1], bg[2]); if (dq > mejor) { mejor = dq; F = [d[j], d[j + 1], d[j + 2]]; } }
+        if (!F) { if (PIX.dist(d[i], d[i + 1], d[i + 2], bg[0], bg[1], bg[2]) < 3 * 38 * 38) quitar.push(p); continue; }     // hebra finísima: se va solo si es casi fondo
+        const Fv = [F[0] - bg[0], F[1] - bg[1], F[2] - bg[2]], ff = Fv[0] * Fv[0] + Fv[1] * Fv[1] + Fv[2] * Fv[2];
+        if (ff < 3 * 34 * 34) continue;                    // lo de atrás es tan claro como el fondo (ropa blanca): no se puede saber, se deja
+        const a = (P[0] * Fv[0] + P[1] * Fv[1] + P[2] * Fv[2]) / ff;
+        if (a < 0.5) quitar.push(p); else if (a < 0.9) pintar.push(p, F[0], F[1], F[2]);
+      }
+      for (let k = 0; k < pintar.length; k += 4) { const i = pintar[k] * 4; d[i] = pintar[k + 1]; d[i + 1] = pintar[k + 2]; d[i + 2] = pintar[k + 3]; limpio[pintar[k]] = 1; }
+      if (!quitar.length) break; quitar.forEach(p => { B[p] = 1; });
+    }
+    // 4) motas: islitas sueltas que quedaron lejos de la figura
+    { const comp = new Int32Array(N), tam = [0]; let n = 0; for (let p0 = 0; p0 < N; p0++) { if (B[p0] || comp[p0]) continue; n++; let c = 0; const pila = [p0]; comp[p0] = n; while (pila.length) { const p = pila.pop(); c++; const x = p % w, y = (p / w) | 0; for (const q of [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, y > 0 ? p - w : -1, y < h - 1 ? p + w : -1]) if (q >= 0 && !B[q] && !comp[q]) { comp[q] = n; pila.push(q); } } tam.push(c); }
+      const mayor = Math.max(...tam), minimo = Math.max(4, mayor * 0.0015); for (let p = 0; p < N; p++) if (comp[p] && tam[comp[p]] < minimo) B[p] = 1; }
+    for (let p = 0; p < N; p++) d[p * 4 + 3] = B[p] ? 0 : 255;
+    return o;
+  };
+  /** Quita el halo: los píxeles del borde que quedaron mezclados con el color del fondo (el filo claro alrededor de un dibujo recortado).
+      Un píxel de borde se va si se parece al fondo bastante más que el dibujo que tiene detrás; lo que es claro de verdad (tela blanca, metal) se queda. */
+  PIX.defringe = (im, fondos, pasos = 2) => {
+    const o = PIX.clone(im), w = im.w, h = im.h, d = o.d, V = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]];
+    const aF = i => { let m = Infinity; for (const c of fondos) { const q = PIX.dist(d[i], d[i + 1], d[i + 2], c[0], c[1], c[2]); if (q < m) m = q; } return m; };
+    const op = (x, y) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3] > 8;
+    for (let n = 0; n < pasos; n++) {
+      const borde = new Uint8Array(w * h), quitar = [];
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { if (!op(x, y)) continue; if (!op(x + 1, y) || !op(x - 1, y) || !op(x, y + 1) || !op(x, y - 1)) borde[y * w + x] = 1; }
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const p = y * w + x; if (!borde[p]) continue; const dp = aF(p * 4); let dentro = -1;
+        for (const [dx, dy] of V) for (let k = 1; k <= 3; k++) { const xx = x + dx * k, yy = y + dy * k; if (!op(xx, yy)) break; if (borde[yy * w + xx]) continue; const q = aF((yy * w + xx) * 4); if (q > dentro) dentro = q; }
+        // 3 * 70² ≈ 14700: solo cuenta como halo algo que de verdad se parece al fondo
+        if (dentro < 0) { if (dp < 3 * 45 * 45) quitar.push(p); } else if (dp < 3 * 110 * 110 && dp < dentro * 0.45) quitar.push(p);
+      }
+      if (!quitar.length) break; quitar.forEach(p => { d[p * 4 + 3] = 0; });
     }
     return o;
   };
@@ -508,11 +587,11 @@
 
 
   // ------------------------------------------------------------------ conversor (referencia -> asset)
-  PIX.CONV = { quitarFondo: true, tolFondo: 24, colorFondo: null, recortar: true, modoTam: 'alto', alto: 32, ancho: 32, factor: 4, metodo: 'dominante', usarPaleta: true, fuerza: 1, maxColores: 0, tramado: 0, bordesDuros: true, umbral: 110, limpiar: true, contorno: 'ninguno', colorContorno: '#1b1420' };
+  PIX.CONV = { quitarFondo: true, tolFondo: 24, colorFondo: null, huecos: false, fino: true, sombra: 50, recortar: true, modoTam: 'alto', alto: 32, ancho: 32, factor: 4, metodo: 'dominante', usarPaleta: true, fuerza: 1, maxColores: 0, tramado: 0, bordesDuros: true, umbral: 110, limpiar: true, contorno: 'ninguno', colorContorno: '#1b1420' };
   /** Pasa una imagen de referencia por toda la cadena: fondo, recorte, tamaño, paleta, limpieza y contorno. */
   PIX.convert = (im, cfg = {}, paleta = []) => {
     const c = Object.assign({}, PIX.CONV, cfg); let r = PIX.clone(im);
-    if (c.quitarFondo) r = PIX.removeBg(r, c.tolFondo, c.colorFondo || undefined);
+    if (c.quitarFondo) r = c.fino === false ? PIX.removeBg(r, c.tolFondo, c.colorFondo || undefined, { huecos: c.huecos }) : PIX.matte(r, c.tolFondo, c.colorFondo || undefined, { huecos: c.huecos, sombra: c.sombra === undefined ? 50 : c.sombra });
     if (c.recortar) r = PIX.trim(r);
     let w = r.w, h = r.h;
     if (c.modoTam === 'alto') { h = Math.max(1, c.alto | 0); w = Math.max(1, Math.round(r.w * h / r.h)); }

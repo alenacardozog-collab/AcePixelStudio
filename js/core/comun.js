@@ -142,7 +142,7 @@ CK.soltarEn = (el, fn) => {
 CK.pestanas = (tabs, inicial) => {
   const cab = CK.h('div.pest'), cuerpo = CK.h('div.pest-cuerpo'), cont = CK.h('div.pest-caja', cab, cuerpo); let act = inicial || tabs[0].id;
   const pintar = () => { CK.vaciar(cab); tabs.forEach(t => { const b = CK.h('button' + (t.id === act ? '.activo' : ''), { type: 'button', html: t.ico ? CK.ico(t.ico, 16) : '', onclick: () => { act = t.id; pintar(); } }, CK.h('span', t.txt)); if (t.desc) CK.tip(b, t.txt, t.desc); cab.append(b); }); CK.vaciar(cuerpo); const t = tabs.find(x => x.id === act); if (t) t.pintar(cuerpo); };
-  cont.refrescar = pintar; cont.ir = id => { act = id; pintar(); }; cont.actual = () => act; pintar(); return cont;
+  cont.refrescar = pintar; cont.ir = id => { act = id; pintar(); }; cont.actual = () => act; cont.visible = id => act === id; cont.suelta = () => false; pintar(); return cont;
 };
 /** Reproductor de cuadros en un lienzo chico. cuadros() devuelve [canvas…]; fps() los cuadros por segundo. */
 CK.reproductor = (cuadros, fps, o = {}) => {

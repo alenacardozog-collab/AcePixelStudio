@@ -198,3 +198,12 @@ select.in { padding: 0 4px; }
 .acople-borde { position: absolute; top: 0; bottom: 0; width: 6px; cursor: ew-resize; z-index: 5; touch-action: none; } .acople-borde.izq { right: -3px; } .acople-borde.der { left: -3px; }
 .acople-borde:hover, .acople-borde.activo { background: var(--oro); opacity: .55; }
 .acople-zona { position: fixed; z-index: 39; background: rgba(232,184,58,.16); border: 2px dashed var(--oro); border-radius: 6px; pointer-events: none; }
+
+/* pestañas apiladas */
+.pest .pest-apilar { flex: none; width: 30px; } .pila-cab { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; background: var(--hueco); border-bottom: 1px solid var(--linea); font-size: 11.5px; font-weight: 600; color: var(--suave); cursor: pointer; user-select: none; position: sticky; top: 34px; z-index: 1; }
+.pila-cab:hover { color: var(--texto); } .pila-cuerpo { overflow-y: auto; min-height: 0; } .pila-borde { height: 7px; cursor: ns-resize; background: var(--linea); border-top: 1px solid #000; touch-action: none; } .pila-borde:hover, .pila-borde.activo { background: var(--oro); }
+
+/* capas que se sueltan sobre cuadros */
+.cuadro.nuevo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 62px; height: 62px; border-style: dashed; color: var(--tenue); font-size: 9.5px; text-align: center; cursor: default; }
+.cuadros.esperando .cuadro { border-color: var(--azul, #58a6ff); } .cuadros.esperando .cuadro.nuevo { color: var(--texto); }
+.cuadro.soltar { border-color: var(--oro) !important; box-shadow: 0 0 0 2px rgba(232,184,58,.45); background: #3a3523; }

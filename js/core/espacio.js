@@ -88,7 +88,7 @@
     if (!o || !o.despegable) return pest0(tabs, inicial);
     const clave = 'pest:' + o.id; const st = datos[clave] = datos[clave] || {};
     const cab = h('div.pest'), cuerpo = h('div.pest-cuerpo'), cont = h('div.pest-caja', cab, cuerpo), flot = {}; let act = inicial || tabs[0].id;
-    const suelta = id => !!(st[id] && st[id].suelta);
+    const suelta = id => !!(st[id] && st[id].suelta === true);
     const ventana = t => {
       if (flot[t.id]) return flot[t.id]; const s = st[t.id], cu = h('div.panel.acople-cuerpo');
       const caja = h('div.acople-caja.flotante.de-pest', h('div.acople-barra', h('span.acople-agarre'), h('span.acople-tit', { html: t.ico ? CK.ico(t.ico, 14) : '' }, ' ' + t.txt), CK.btn({ ico: 'pegar', tip: 'Pegar', desc: 'Devuelve esta ventana a su lugar entre las pestañas. También con doble clic en la barrita.', cls: 'chico plano', on: () => soltar(t.id, false) })), cu);
@@ -99,7 +99,7 @@
     };
     const soltar = (id, v, pos) => {
       const t = tabs.find(x => x.id === id); if (!t) return; const s = st[id] = st[id] || {};
-      if (v) { const r = cont.getBoundingClientRect(), n = Object.keys(st).filter(k => st[k].suelta).length; Object.assign(s, { suelta: true, w: s.w || Math.max(260, r.width), h: s.h || 380, x: pos ? pos.x : s.x !== undefined ? s.x : r.left - Math.max(260, r.width) - 16 - n * 24, y: pos ? pos.y : s.y !== undefined ? s.y : r.top + 40 + n * 30 }); dentro(s); }
+      if (v) { const r = cont.getBoundingClientRect(), n = Object.keys(st).filter(k => st[k] && st[k].suelta === true).length; Object.assign(s, { suelta: true, w: s.w || Math.max(260, r.width), h: s.h || 380, x: pos ? pos.x : s.x !== undefined ? s.x : r.left - Math.max(260, r.width) - 16 - n * 24, y: pos ? pos.y : s.y !== undefined ? s.y : r.top + 40 + n * 30 }); dentro(s); }
       else { s.suelta = false; if (flot[id]) { flot[id].caja.remove(); delete flot[id]; } act = id; }
       guardar(); pintar();
     };
@@ -111,10 +111,27 @@
         b.addEventListener('pointerdown', e => arrastrar(e, () => { }, ev => soltar(t.id, true, { x: ev.clientX - 120, y: ev.clientY - 10 }), 22));
         cab.append(b);
       });
+      if (o.apilable && pegadas.length > 1) { const b = CK.btn({ ico: st._apilado ? 'pegar' : 'lista', tip: st._apilado ? 'Volver a pestañas' : 'Apilar', desc: st._apilado ? 'Vuelve a mostrar una pestaña por vez.' : 'Muestra todas las pestañas una debajo de la otra, cada una con su alto. El borde entre dos se arrastra para agrandar una y achicar la otra.', cls: 'chico plano' + (st._apilado ? ' activo' : ''), on: () => { st._apilado = !st._apilado; guardar(); pintar(); } }); b.classList.add('pest-apilar'); cab.append(b); }
+      if (st._apilado && pegadas.length > 1) {
+        [...cab.querySelectorAll('button:not(.pest-apilar)')].forEach(b => { b.classList.remove('activo'); b.onclick = () => { const s = cuerpo.querySelector('[data-pila="' + b.dataset.pila + '"]'); if (s) s.scrollIntoView({ block: 'nearest' }); }; });
+        pegadas.forEach((t, i) => cab.querySelectorAll('button:not(.pest-apilar)')[i].dataset.pila = t.id);
+        const sc = cuerpo.scrollTop; CK.vaciar(cuerpo); st._altos = st._altos || {}; st._cerradas = st._cerradas || {};
+        pegadas.forEach(t => {
+          const cerrada = !!st._cerradas[t.id], caja = h('div.pila-cuerpo', { style: { height: (st._altos[t.id] || o.alto || 250) + 'px', display: cerrada ? 'none' : '' } }), borde = h('div.pila-borde', { style: { display: cerrada ? 'none' : '' } });
+          const cabeza = h('div.pila-cab', { 'data-pila': t.id, html: CK.ico(cerrada ? 'flechaD' : 'flechaAb', 12) + (t.ico ? CK.ico(t.ico, 14) : ''), onclick: () => { st._cerradas[t.id] = !cerrada; guardar(); pintar(); } }, h('span', t.txt));
+          CK.tip(cabeza, t.txt, 'Clic para plegar o desplegar. Arrastrá la franja de abajo para cambiarle el alto.');
+          borde.addEventListener('pointerdown', e => { const a0 = caja.offsetHeight; borde.classList.add('activo'); arrastrar(e, (dx, dy) => { const a = Math.max(60, Math.min(900, a0 + dy)); caja.style.height = a + 'px'; st._altos[t.id] = a; }, () => { borde.classList.remove('activo'); guardar(); window.dispatchEvent(new Event('resize')); }); });
+          borde.addEventListener('dblclick', () => { delete st._altos[t.id]; guardar(); pintar(); });
+          cuerpo.append(cabeza, caja, borde); if (!cerrada) t.pintar(caja);
+        });
+        cuerpo.scrollTop = sc;
+        tabs.filter(x => suelta(x.id)).forEach(x => { const v = ventana(x), s = st[x.id], sc2 = v.cu.scrollTop; Object.assign(v.caja.style, { left: s.x + 'px', top: s.y + 'px', width: s.w + 'px', height: s.h + 'px' }); if (!v.caja.style.zIndex) alFrente(v.caja); CK.vaciar(v.cu); x.pintar(v.cu); v.cu.scrollTop = sc2; });
+        return;
+      }
       CK.vaciar(cuerpo); const t = pegadas.find(x => x.id === act); if (t) t.pintar(cuerpo); else cuerpo.append(h('div.bloque', h('p.nota-txt', 'Todas las pestañas están despegadas. Doble clic en la barrita de una ventana la devuelve acá.')));
       tabs.filter(x => suelta(x.id)).forEach(x => { const v = ventana(x), s = st[x.id], sc = v.cu.scrollTop; Object.assign(v.caja.style, { left: s.x + 'px', top: s.y + 'px', width: s.w + 'px', height: s.h + 'px' }); if (!v.caja.style.zIndex) alFrente(v.caja); CK.vaciar(v.cu); x.pintar(v.cu); v.cu.scrollTop = sc; });
     };
-    cont.refrescar = pintar; cont.ir = id => { if (!suelta(id)) act = id; pintar(); }; cont.actual = () => act; cont.suelta = suelta; cont.soltar = soltar; cont.tabs = tabs; cont.nombre = o.nombre || o.id;
+    cont.refrescar = pintar; cont.ir = id => { if (!suelta(id)) act = id; pintar(); }; cont.actual = () => act; cont.visible = id => act === id || suelta(id) || !!st._apilado; cont.apilar = v => { st._apilado = !!v; guardar(); pintar(); }; cont.suelta = suelta; cont.soltar = soltar; cont.tabs = tabs; cont.nombre = o.nombre || o.id;
     cont.restablecer = () => { Object.keys(flot).forEach(id => { flot[id].caja.remove(); delete flot[id]; }); Object.keys(st).forEach(k => delete st[k]); act = inicial || tabs[0].id; pintar(); };
     E.pestanas.push(cont); pintar(); return cont;
   };
