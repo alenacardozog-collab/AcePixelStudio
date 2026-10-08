@@ -1,0 +1,64 @@
+{
+ "formato": "ck-editor",
+ "version": 1,
+ "nombre": "CastleKnight",
+ "creado": 1791492404256,
+ "modificado": 1791492456572,
+ "juego": {
+  "url": "../prueba/index.html",
+  "carpetaAssets": "assets/editor",
+  "archivoDatos": "js/maps/data/editor_data.js"
+ },
+ "estilo": {
+  "tile": 64,
+  "personaje": [
+   100,
+   100
+  ],
+  "escalaVista": 3,
+  "perspectiva": "Top-down 3/4",
+  "luz": "arriba-izquierda",
+  "contorno": "color",
+  "colorContorno": "#1b1420",
+  "maxColores": 45,
+  "bloquearPaleta": false,
+  "notas": "",
+  "paleta": [
+   "#1b1420",
+   "#3b2a3a",
+   "#5a4630",
+   "#7d6846",
+   "#a08a5c",
+   "#c9b47a",
+   "#e9dfc4",
+   "#2f4a2c",
+   "#4c7a3a",
+   "#74a84a",
+   "#a6cf5e",
+   "#3a4a66",
+   "#5d7a9a",
+   "#8fb3c9",
+   "#7d2a30",
+   "#b8483c",
+   "#e0803c",
+   "#f2c14e",
+   "#6b6258",
+   "#93897a",
+   "#bdb4a3",
+   "#f5f1e6"
+  ],
+  "definida": true
+ },
+ "assets": {},
+ "mapas": {},
+ "prefabs": {},
+ "fx": {},
+ "npcs": {},
+ "misiones": [],
+ "poses": {},
+ "notas": [],
+ "pixel": {},
+ "ui": {
+  "seccion": "estilo"
+ }
+}

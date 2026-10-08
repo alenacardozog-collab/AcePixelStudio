@@ -1,0 +1,22 @@
+{
+  "name": "ace-pixel-studio",
+  "version": "1.0.0",
+  "description": "Suite integral para diseño y desarrollo de videojuegos 2D en pixel art (mapas, tilesets, animaciones, partículas FX y diálogos).",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "cli": "node herramientas/ck.js"
+  },
+  "keywords": [
+    "pixel-art",
+    "game-dev",
+    "map-editor",
+    "tileset",
+    "animation",
+    "spritesheet",
+    "phaser",
+    "rpg-2d"
+  ],
+  "author": "alenacardozog-collab",
+  "license": "MIT"
+}
