@@ -1,6 +1,7 @@
 /* FXSIM: reproduce un efecto (partículas, luces, destellos) sobre cualquier canvas 2D.
    No depende del editor: el mismo archivo sirve dentro del juego (window.CKFx).
-   efecto = { dur (segundos), bucle, mov:{vx,vy}, capas:[ {tipo:'emisor'|'luz'|'destello'|'sacudida', inicio, fin, …} ] } */
+   efecto = { dur (segundos), bucle, mov:{vx,vy}, contorno:{grosor,color,forma}, capas:[ {tipo:'emisor'|'luz'|'destello'|'sacudida', inicio, fin, contorno, …} ] }
+   contorno: borde alrededor de las partículas (de 1 a 8 px). La capa puede usar el del efecto, uno propio o ninguno (contorno: false). */
 (function (root) {
   'use strict';
   const rng = seed => { let s = (seed >>> 0) || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; };
@@ -15,6 +16,8 @@
   };
   const NOMBRES_CURVA = { lineal: 'Pareja (lineal)', entrada: 'Arranca lento', salida: 'Frena al final', suave: 'Suave (lento-rápido-lento)', muySuave: 'Muy suave', rapida: 'Cambia rápido al principio', tardia: 'Cambia casi al final', rebote: 'Con rebote', elastica: 'Elástica', pico: 'Sube y vuelve (pico)', pulso: 'Late dos veces', escalones: 'A saltos' };
   const cur = (n, k) => (CURVAS[n] || CURVAS.lineal)(k);
+  const TMP = [];
+  const tmp = (i, w, h) => { let c = TMP[i]; if (!c) c = TMP[i] = document.createElement('canvas'); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return c; };
   const ruido = (a, b) => { const v = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return (v - Math.floor(v)) * 2 - 1; };
   const DEF = { forma: 'punto', ancho: 0, alto: 0, tasa: 20, rafaga: 0, vida: [0.4, 0.8], vel: [20, 40], angulo: -90, apertura: 30, gravX: 0, gravY: 0, freno: 0, tam: [2, 1], colores: ['#ffffff'], alfa: [1, 1], figura: 'pixel', mezcla: 'normal', x: 0, y: 0, giro: 0, curvaTam: 'lineal', curvaAlfa: 'lineal', curvaColor: 'lineal', colorSuave: false, suavizado: false, aparece: 0, estela: 0, orbita: 0, atraccion: 0, turbulencia: 0, rebote: 0, suelo: 40, tamAzar: 0, radial: false, ritmo: 'constante', estirar: 0 };
 
@@ -69,10 +72,12 @@
         } else if (c.tipo === 'destello') { ctx.save(); ctx.globalCompositeOperation = c.mezcla === 'normal' ? 'source-over' : 'lighter'; ctx.globalAlpha = (c.fuerza === undefined ? 0.6 : c.fuerza) * (1 - k); ctx.fillStyle = c.color || '#ffffff'; ctx.fillRect(-4096, -4096, 8192, 8192); ctx.restore(); }
       });
       if (pase === 'luces') return;
-      for (const q of this.p) {
+      // contorno: el del efecto (e.contorno = { grosor, color }) o el propio de la capa (c.contorno = false para ninguno)
+      const cfgDe = c => { if (c.contorno === false) return null; const o = c.contorno && typeof c.contorno === 'object' ? c.contorno : e.contorno; return o && o.grosor > 0 ? o : null; };
+      const dib = (ctx, q) => {
         const d = q.d, k = q.t / q.vida, suave = !!d.suavizado;
         const tamF = Math.max(suave ? 0.6 : 1, lerp(d.tam[0], d.tam[1], cur(d.curvaTam, k)) * (q.k || 1)), tam = suave ? tamF : Math.max(1, Math.round(tamF));
-        let alfa = lerp(d.alfa[0], d.alfa[1], cur(d.curvaAlfa, k)); if (d.aparece > 0 && k < d.aparece) alfa *= k / d.aparece; if (alfa <= 0.02) continue;
+        let alfa = lerp(d.alfa[0], d.alfa[1], cur(d.curvaAlfa, k)); if (d.aparece > 0 && k < d.aparece) alfa *= k / d.aparece; if (alfa <= 0.02) return;
         const nC = d.colores.length, kC = Math.min(0.9999, Math.max(0, cur(d.curvaColor, k))); let col;
         if (d.colorSuave && nC > 1) { const f = kC * (nC - 1), i0 = Math.floor(f), a = hex(d.colores[i0]), b = hex(d.colores[Math.min(nC - 1, i0 + 1)]), u = f - i0; col = 'rgb(' + Math.round(lerp(a[0], b[0], u)) + ',' + Math.round(lerp(a[1], b[1], u)) + ',' + Math.round(lerp(a[2], b[2], u)) + ')'; }
         else col = d.colores[Math.min(nC - 1, Math.floor(kC * nC))];
@@ -93,6 +98,23 @@
         else if (fig === 'cruz') { ctx.fillRect(Math.round(px) - tam, Math.round(py), tam * 2 + 1, 1); ctx.fillRect(Math.round(px), Math.round(py) - tam, 1, tam * 2 + 1); }
         else if (fig === 'gota') ctx.fillRect(Math.round(px), Math.round(py) - tam, 1, tam + 1);
         else if (fig === 'asset' && recurso) { const r = recurso(d.asset); if (r && r.img) { const f = r.cuadro(d.animar ? Math.min(r.n - 1, Math.floor(k * r.n)) : Math.floor(q.s * r.n) % r.n), sc = tamF / Math.max(1, d.tam[0]); ctx.save(); ctx.translate(px, py); if (d.giro) ctx.rotate(q.rot); ctx.imageSmoothingEnabled = suave; ctx.drawImage(r.img, f.x, f.y, f.w, f.h, -Math.round(f.w * sc / 2), -Math.round(f.h * sc / 2), Math.round(f.w * sc), Math.round(f.h * sc)); ctx.restore(); } else ctx.fillRect(px, py, tam, tam); }
+            };
+      const conContorno = typeof document !== 'undefined' && ctx.canvas && this.p.some(q => cfgDe(q.c));
+      if (!conContorno) for (const q of this.p) dib(ctx, q);
+      else {
+        const orden = new Map(); (e.capas || []).forEach((c, i) => orden.set(c, i)); const grupos = new Map();
+        for (const q of this.p) { if (!grupos.has(q.c)) grupos.set(q.c, []); grupos.get(q.c).push(q); }
+        [...grupos.keys()].sort((p1, p2) => (orden.get(p1) || 0) - (orden.get(p2) || 0)).forEach(c => {
+          const cfg = cfgDe(c), l = grupos.get(c); if (!cfg) { l.forEach(q => dib(ctx, q)); return; }
+          const W = ctx.canvas.width, H = ctx.canvas.height, A = tmp(0, W, H), B = tmp(1, W, H), t = ctx.getTransform();
+          const xa = A.getContext('2d'); xa.setTransform(1, 0, 0, 1, 0, 0); xa.globalAlpha = 1; xa.globalCompositeOperation = 'source-over'; xa.clearRect(0, 0, W, H); xa.setTransform(t); xa.imageSmoothingEnabled = ctx.imageSmoothingEnabled;
+          l.forEach(q => dib(xa, q)); xa.setTransform(1, 0, 0, 1, 0, 0); xa.globalAlpha = 1; xa.globalCompositeOperation = 'source-over';
+          const xb = B.getContext('2d'); xb.setTransform(1, 0, 0, 1, 0, 0); xb.globalAlpha = 1; xb.globalCompositeOperation = 'source-over'; xb.clearRect(0, 0, W, H); xb.drawImage(A, 0, 0); xb.globalCompositeOperation = 'source-in'; xb.fillStyle = cfg.color || '#1b1420'; xb.fillRect(0, 0, W, H); xb.globalCompositeOperation = 'source-over';
+          const s = Math.max(1, Math.hypot(t.a, t.b)), g = Math.max(1, Math.min(8, Math.round(cfg.grosor || 1))), redondo = cfg.forma !== 'cuadrado';
+          ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = cfg.alfa === undefined ? 1 : cfg.alfa; ctx.globalCompositeOperation = 'source-over'; ctx.imageSmoothingEnabled = false;
+          for (let dy = -g; dy <= g; dy++) for (let dx = -g; dx <= g; dx++) { if (!dx && !dy) continue; if (redondo && dx * dx + dy * dy > g * g + g * 0.6) continue; ctx.drawImage(B, Math.round(dx * s), Math.round(dy * s)); }
+          ctx.globalAlpha = 1; ctx.globalCompositeOperation = c.mezcla === 'luz' ? 'lighter' : 'source-over'; ctx.drawImage(A, 0, 0); ctx.restore();
+        });
       }
       ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     }

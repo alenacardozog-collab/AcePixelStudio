@@ -65,7 +65,7 @@
     D.alias = [...alias];
     Object.values(P.fx).forEach(f => { D.fx[f.id] = f; (f.capas || []).forEach(c => { if (c.figura === 'asset' && P.assets[c.asset]) { usados.add(c.asset); } }); });
     Object.values(P.npcs).forEach(n => { D.npcs[n.id] = { id: n.id, nombre: n.nombre, oficio: n.oficio, saludo: n.saludo || [], despedida: n.despedida || [], escape: n.escape || [], temas: n.temas || [] }; });
-    usados.forEach(id => { const a = P.assets[id]; if (!a || J.texDe(a) || !CK.img[id]) return; const k = 'ed_' + id; imagenes[k] = CK.img[id]; D.assets[k] = { w: a.w, h: a.h }; if (a.cuadros) D.assets[k].cuadros = { fw: a.cuadros.fw, fh: a.cuadros.fh, fps: a.cuadros.fps || 8, bucle: a.cuadros.bucle !== false, vaiven: !!a.cuadros.vaiven, orden: a.cuadros.orden || null }; });
+    usados.forEach(id => { const a = P.assets[id]; if (!a || J.texDe(a) || !CK.img[id]) return; const k = 'ed_' + id; imagenes[k] = CK.img[id]; D.assets[k] = { w: a.w, h: a.h }; if (a.cuadros) D.assets[k].cuadros = { fw: a.cuadros.fw, fh: a.cuadros.fh, fps: a.cuadros.fps || 8, bucle: a.cuadros.bucle !== false, vaiven: !!a.cuadros.vaiven, orden: a.cuadros.orden || null, dur: a.cuadros.dur || null }; });
     // las partículas que usan un asset lo nombran por su clave de textura
     Object.values(D.fx).forEach(f => { D.fx[f.id] = CK.clone(f); D.fx[f.id].capas.forEach(c => { if (c.figura === 'asset' && P.assets[c.asset]) c.asset = claveDe(P.assets[c.asset]); }); });
     return { datos: D, imagenes };

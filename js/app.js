@@ -2,7 +2,7 @@
 'use strict';
 (function () {
   const h = CK.h;
-  const GRUPOS = [['inicio', 'estilo'], ['mapa'], ['convertir', 'texturas', 'pixel'], ['anim', 'fx'], ['npc', 'misiones', 'interfaz'], ['revisor', 'notas', 'portfolio']];
+  const GRUPOS = [['inicio', 'estilo', 'biblioteca'], ['mapa'], ['convertir', 'texturas', 'pixel'], ['anim', 'fx'], ['npc', 'misiones', 'interfaz'], ['revisor', 'notas', 'portfolio']];
   let actual = null;
 
   // ------------------------------------------------------------ secciones

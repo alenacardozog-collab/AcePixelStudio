@@ -86,13 +86,13 @@ CK.galeria = o => {
   const pintar = () => {
     CK.vaciar(grid); if (!CK.P) return;
     const tipos = typeof o.tipos === 'function' ? o.tipos() : o.tipos;
-    const lista = CK.asset.lista(tipos).filter(a => !filtro || a.nombre.toLowerCase().includes(filtro) || a.id.includes(filtro) || (a.etiquetas || []).join(' ').includes(filtro));
+    const lista = CK.asset.lista(tipos).filter(a => !filtro || a.nombre.toLowerCase().includes(filtro) || a.id.includes(filtro) || (a.etiquetas || []).join(' ').includes(filtro) || (a.carpeta || '').toLowerCase().includes(filtro));
     if (!lista.length) { grid.append(CK.h('div.nota-txt', { style: { gridColumn: '1 / -1' } }, o.vacio || (filtro ? 'Nada coincide con la búsqueda.' : 'Todavía no hay assets de este tipo.'))); return; }
     const act = o.actual ? o.actual() : null;
     lista.forEach(a => {
-      const t = CK.h('button.tarjeta' + (a.id === act ? '.activo' : ''), { type: 'button', onclick: () => { if (o.alElegir) o.alElegir(a.id); pintar(); }, ondblclick: () => o.alDoble && o.alDoble(a.id), draggable: o.arrastrar ? 'true' : null, ondragstart: e => e.dataTransfer.setData('text/ck-asset', a.id) },
+      const t = CK.h('button.tarjeta' + (a.id === act ? '.activo' : ''), { type: 'button', onclick: () => { if (o.alElegir) o.alElegir(a.id); pintar(); }, ondblclick: () => o.alDoble && o.alDoble(a.id), draggable: o.arrastrar ? 'true' : null, ondragstart: e => e.dataTransfer.setData('text/ck-asset', a.id), oncontextmenu: e => { e.preventDefault(); if (o.alMenu) o.alMenu(a.id, e); else if (CK.menuAsset) CK.menuAsset(a.id, e, o.menuExtra ? o.menuExtra(a.id) : null); } },
         CK.mini(CK.img[a.id], o.grande ? 80 : 48, CK.asset.cuadro(a, 0)), CK.h('span.tn', a.nombre), a.cuadros ? CK.h('span.marca-t', String(CK.asset.nCuadros(a))) : null);
-      CK.tip(t, a.nombre, (CK.asset.TIPOS[a.tipo] || a.tipo) + ' · ' + (a.cuadros ? a.cuadros.fw + '×' + a.cuadros.fh + ' px, ' + CK.asset.nCuadros(a) + ' cuadros' : a.w + '×' + a.h + ' px') + (o.pista ? '. ' + o.pista : ''));
+      CK.tip(t, a.nombre, (CK.asset.TIPOS[a.tipo] || a.tipo) + ' · ' + (a.cuadros ? a.cuadros.fw + '×' + a.cuadros.fh + ' px, ' + CK.asset.nCuadros(a) + ' cuadros' : a.w + '×' + a.h + ' px') + (o.pista ? '. ' + o.pista : '') + ' Clic derecho: más opciones.');
       grid.append(t);
     });
   };

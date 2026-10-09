@@ -14,6 +14,8 @@
   try { document.write('<script src="js/maps/data/editor_prueba.js?v=' + Date.now().toString(36) + '"><\/script>'); } catch (e) { }
   // Escenario del modo práctica (campo de entrenamiento): archivo aparte y opcional.
   try { document.write('<script src="js/maps/data/editor_practica.js?v=' + Date.now().toString(36) + '"><\/script>'); } catch (e) { }
+  // Sonido del Taller (reverberación por lugar, voces, pluma, respiración, puertas, ambientes): opcional, borrar los dos archivos lo saca.
+  try { document.write('<script src="js/maps/data/editor_sonidos.js?v=' + Date.now().toString(36) + '"><\/script>'); document.write('<script src="js/core/ck_sonido.js?v=' + Date.now().toString(36) + '"><\/script>'); } catch (e) { }
   const PR = () => window.EDITOR_PRUEBA || { imagenes: {}, paseantes: [] };
   const P = MainGameScene.prototype, Q = new URLSearchParams(location.search);
   const ED = window.CK_EDITOR = { datos: D, indice: {}, npcs: {}, enemigos: {}, fxPts: {}, vivos: [], chat: null, salto: null };
@@ -38,7 +40,7 @@
   P.create = function () {
     const r = create0.apply(this, arguments);
     try {
-      Object.keys(D.assets || {}).forEach(key => { const c = D.assets[key].cuadros; if (!c || !this.textures.exists(key) || this.anims.exists(key)) return; const n = this.textures.get(key).frameTotal - 1, orden = c.orden || [...Array(n).keys()]; this.anims.create({ key, frames: orden.map(i => ({ key, frame: i })), frameRate: c.fps || 8, repeat: c.bucle === false ? 0 : -1, yoyo: !!c.vaiven }); });
+      Object.keys(D.assets || {}).forEach(key => { const c = D.assets[key].cuadros; if (!c || !this.textures.exists(key) || this.anims.exists(key)) return; const n = this.textures.get(key).frameTotal - 1, orden = c.orden || [...Array(n).keys()]; this.anims.create({ key, frames: orden.map(i => ({ key, frame: i, duration: c.dur && c.dur[i] ? Math.max(0, c.dur[i] - 1000 / (c.fps || 8)) : 0 })), frameRate: c.fps || 8, repeat: c.bucle === false ? 0 : -1, yoyo: !!c.vaiven }); });
       // texturas que un mapa con prefijo propio (las ruinas usan 'ru_') necesita ver con ese prefijo
       (D.alias || []).concat(Object.keys(A)).forEach(k => { const dst = 'ru_' + k; if (!this.textures.exists(k) || this.textures.exists(dst)) return; const t = this.textures.get(k), src = t.getSourceImage(), c = (D.assets[k] || {}).cuadros; if (c) { this.textures.addSpriteSheet(dst, src, { frameWidth: c.fw, frameHeight: c.fh }); } else if (t.frameTotal > 2) { const f = t.get(0); this.textures.addSpriteSheet(dst, src, { frameWidth: f.width, frameHeight: f.height }); } else this.textures.addImage(dst, src); });
     } catch (e) { console.warn('[Taller] animaciones:', e); }
@@ -199,7 +201,66 @@
 
   // ------------------------------------------------------------------ 7. música por mapa
   const musica0 = P.musicForZone;
-  P.musicForZone = function (key) { const id = ED.mapaDeZona(key), base = musica0.apply(this, arguments); return id && base !== 'boss' && D.mapas[id].musica ? D.mapas[id].musica : base; };
+  P.musicForZone = function (key) {
+    ED.musica.escena = this;
+    const id = ED.mapaDeZona(key), base = musica0.apply(this, arguments);
+    if (id && base !== 'boss' && D.mapas[id].musica) return D.mapas[id].musica;
+    if (base !== 'village') return base;
+    const c = this.currentInterior;
+    if (c && c.building && c.building.kind === 'bar') return 'taberna';           // la taberna tiene su tema
+    if (!c && this.isNight && this.isNight()) return 'noche';                     // aldea de noche
+    return base;
+  };
+
+  // Temas grabados extra (assets/Music/<nombre>.mp3). Se precargan para que estén listos al entrar a
+  // la zona, y los cambios de tema se hacen con un fundido corto en vez de un corte seco.
+  const TEMAS = ['castle', 'ruins', 'boss', 'taberna', 'noche', 'practica'];
+  ED.musica = {
+    precargar() {
+      if (typeof music === 'undefined' || !music.audioElements) return;
+      TEMAS.forEach(n => {
+        if (music.audioElements[n] !== undefined) return;
+        const a = new Audio('assets/Music/' + n + '.mp3');
+        a.loop = true; a.preload = 'auto'; a.volume = music.enabled ? music.volume : 0;
+        a.addEventListener('error', () => { if (music.audioElements[n] === a) music.audioElements[n] = null; });
+        // si la escena ya pidió este tema mientras cargaba, arranca apenas esté listo
+        a.addEventListener('canplaythrough', () => { const s = ED.musica.escena; if (s && s._zoneMusic === n && music.currentTrack !== n && s.playZoneMusic) s.playZoneMusic(n); });
+        music.audioElements[n] = a;
+      });
+    },
+    fundido(el, hasta, ms, fin) {
+      clearInterval(el._ckFade); const desde = el.volume, t0 = Date.now();
+      el._ckFade = setInterval(() => { const k = Math.min(1, (Date.now() - t0) / ms); try { el.volume = Math.max(0, Math.min(1, desde + (hasta - desde) * k)); } catch (e) { } if (k >= 1) { clearInterval(el._ckFade); el._ckFade = null; if (fin) fin(); } }, 30);
+    }
+  };
+  if (typeof music !== 'undefined' && music && !music._ckFundido) {
+    music._ckFundido = true;
+    const stop0 = music.stopAll.bind(music), M = ED.musica;
+    const cortar = el => { if (el._ckFade) { clearInterval(el._ckFade); el._ckFade = null; } };
+    music.play = function (track) {
+      this.init(); M.precargar();
+      this._pendingTrack = track;
+      const nuevo = this.audioElements[track];
+      if (this.currentTrack === track && nuevo && !nuevo.paused && !nuevo._ckSale) return;
+      Object.keys(this.audioElements).forEach(k => {
+        const el = this.audioElements[k]; if (!el || k === track) return;
+        if (!el.paused && this.enabled && el.volume > 0) {           // el que suena se apaga de a poco
+          el._ckSale = true;
+          M.fundido(el, 0, 700, () => { el._ckSale = false; if (music.audioElements[music.currentTrack] !== el) { el.pause(); try { el.currentTime = 0; } catch (e) { } } });
+        } else { cortar(el); el._ckSale = false; try { el.pause(); el.currentTime = 0; } catch (e) { } }
+      });
+      if (!nuevo) return;
+      this.currentTrack = track; cortar(nuevo); nuevo._ckSale = false;
+      const meta = this.enabled ? this.volume : 0;
+      if (nuevo.paused) nuevo.volume = 0;
+      const pr = nuevo.play(); if (pr !== undefined) pr.catch(() => { });
+      if (meta > 0) M.fundido(nuevo, meta, 900); else nuevo.volume = 0;
+    };
+    music.stopAll = function () { Object.keys(this.audioElements).forEach(k => { const el = this.audioElements[k]; if (el) { cortar(el); el._ckSale = false; } }); return stop0(); };
+    const vol0 = music.setVolume.bind(music);
+    music.setVolume = function (v) { Object.keys(this.audioElements).forEach(k => { const el = this.audioElements[k]; if (el && !el._ckSale) cortar(el); }); return vol0(v); };
+    M.precargar();
+  }
 
   // ------------------------------------------------------------------ 8. cada cuadro
   const story0 = P.updateStory;
@@ -283,7 +344,9 @@
       this.partes.push(s.add.image(0, 0, key).setOrigin(0, 0).setDepth(-95));
     },
     armar(s) {
-      const D = window.EDITOR_PRACTICA; if (!D || s._gameMode === 'campaign') return;
+      if (s._gameMode === 'campaign') return;
+      if (s.playZoneMusic) { ED.musica.escena = s; s._zoneMusic = 'practica'; s.playZoneMusic('practica'); }   // tema del campo de práctica
+      const D = window.EDITOR_PRACTICA; if (!D) return;
       if (!s.textures.exists('pr_ts_pasto')) return console.warn('[Taller] práctica: faltan las texturas del suelo');
       this.limpiar(s);
       if (s.meadowTileSprite) s.meadowTileSprite.setVisible(false); if (s.groundGfx) s.groundGfx.setVisible(false);
@@ -317,7 +380,7 @@
     cuadro(s) {
       const c = this.casa; if (!c || !c.puerta || !s.player) return; const p = c.puerta;
       const cerca = Math.hypot(s.player.x - p.ux, s.player.y - p.uy) < p.r;
-      if (cerca !== p.abierta) { p.abierta = cerca; p.sp.play(cerca ? p.key : p.key + '_cierra'); if (window.sfx && sfx.fx) { try { sfx.fx('door_open', 0.5); } catch (e) { } } }
+      if (cerca !== p.abierta) { p.abierta = cerca; p.sp.play(cerca ? p.key : p.key + '_cierra'); if (window.sfx && sfx.fx) { try { sfx.fx(cerca ? 'door_open' : 'door_close', 0.5); } catch (e) { } } }
     }
   };
   ED.practica = PRAC;

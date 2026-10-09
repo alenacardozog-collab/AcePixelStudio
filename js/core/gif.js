@@ -32,8 +32,9 @@
     str('GIF89a'); u16(w); u16(h); B.push(0xF7, 0, 0);
     B.push(0, 0, 0); for (let i = 0; i < 255; i++) { const c = pal[i] || 0; B.push((c >> 16) & 255, (c >> 8) & 255, c & 255); }
     if (o.bucle !== false) { B.push(0x21, 0xFF, 11); str('NETSCAPE2.0'); B.push(3, 1, 0, 0, 0); }
-    for (const f of frames) {
-      B.push(0x21, 0xF9, 4, 0x09, delay & 255, delay >> 8, 0, 0);          // disposal 2 (limpiar) + transparente
+    frames.forEach((f, fi) => {
+      const dl = o.delays && o.delays[fi] ? Math.max(2, Math.round(o.delays[fi] / 10)) : delay;      // duración propia de cada cuadro (ms)
+      B.push(0x21, 0xF9, 4, 0x09, dl & 255, dl >> 8, 0, 0);          // disposal 2 (limpiar) + transparente
       B.push(0x2C); u16(0); u16(0); u16(w); u16(h); B.push(0);
       const idx = new Uint8Array(w * h), cache = new Map();
       for (let y = 0; y < f.h; y++) for (let x2 = 0; x2 < f.w; x2++) {
@@ -44,7 +45,7 @@
       const data = lzw(8, idx); B.push(8);
       for (let p = 0; p < data.length; p += 255) { const n = Math.min(255, data.length - p); B.push(n); for (let q = 0; q < n; q++) B.push(data[p + q]); }
       B.push(0);
-    }
+    });
     B.push(0x3B);
     return new Uint8Array(B);
   };

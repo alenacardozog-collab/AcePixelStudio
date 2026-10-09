@@ -207,3 +207,48 @@ select.in { padding: 0 4px; }
 .cuadro.nuevo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 62px; height: 62px; border-style: dashed; color: var(--tenue); font-size: 9.5px; text-align: center; cursor: default; }
 .cuadros.esperando .cuadro { border-color: var(--azul, #58a6ff); } .cuadros.esperando .cuadro.nuevo { color: var(--texto); }
 .cuadro.soltar { border-color: var(--oro) !important; box-shadow: 0 0 0 2px rgba(232,184,58,.45); background: #3a3523; }
+
+/* ---- menú contextual (clic derecho) */
+.menu-ctx { position: fixed; z-index: 400; min-width: 210px; max-width: 320px; padding: 4px; background: var(--panel2); border: 1px solid var(--linea2); border-radius: 8px; box-shadow: 0 10px 28px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.35); user-select: none; }
+.menu-op { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px; border: 0; border-radius: 5px; background: none; text-align: left; cursor: pointer; color: var(--texto); font-size: 12.5px; outline: none; }
+.menu-op:hover, .menu-op:focus, .menu-op.abre { background: var(--oro); color: var(--sobre-oro); }
+.menu-op.off { opacity: .4; cursor: default; } .menu-op.off:hover { background: none; color: var(--texto); }
+.menu-op.peligro { color: var(--rojo); } .menu-op.peligro:hover, .menu-op.peligro:focus { background: var(--rojo); color: #fff; }
+.menu-ico { width: 16px; height: 16px; flex: none; display: grid; place-items: center; } .menu-ico svg { width: 15px; height: 15px; }
+.menu-txt { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.menu-tecla { font-size: 11px; opacity: .65; } .menu-flecha { font-size: 15px; line-height: 1; opacity: .8; }
+.menu-sep { height: 1px; margin: 4px 6px; background: var(--linea2); }
+.menu-tit { padding: 4px 8px 5px; font-size: 11px; color: var(--tenue); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- biblioteca */
+.bib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; padding: 12px; align-content: start; min-height: 100%; }
+.bib-grid.grande { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); }
+.bib-tarjeta { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px 5px; border: 1px solid var(--linea); border-radius: var(--r); background: var(--panel); cursor: pointer; overflow: hidden; color: var(--texto); }
+.bib-tarjeta:hover { border-color: var(--oro); } .bib-tarjeta.activo { border-color: var(--oro); background: #3a3523; box-shadow: inset 0 0 0 1px var(--oro); }
+.bib-tarjeta canvas { width: 56px; height: 56px; background: var(--hueco); border-radius: 4px; } .bib-grid.grande .bib-tarjeta canvas { width: 96px; height: 96px; }
+.bib-tarjeta .tn { font-size: 11px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bib-tarjeta .bib-meta { font-size: 9.5px; color: var(--tenue); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bib-tarjeta .marca-t { position: absolute; top: 3px; right: 3px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 3px; background: var(--azul); color: #08213f; font: 700 9px/15px var(--fuente); text-align: center; }
+
+/* ---- línea de tiempo de Animar */
+.tl { background: var(--panel); border-top: 1px solid var(--linea); padding: 6px 10px 8px; min-width: 0; }
+.tl-barra { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; } .tl-barra .sep { width: 1px; height: 20px; background: var(--linea2); margin: 0 4px; } .tl-barra .txt { font-size: 11.5px; color: var(--suave); }
+.tl-caja { position: relative; overflow-x: auto; overflow-y: hidden; background: var(--hueco); border: 1px solid var(--linea); border-radius: 6px; padding: 0 6px 6px; }
+.tl-caja.soltando { border-color: var(--oro); box-shadow: inset 0 0 0 2px rgba(232,184,58,.35); }
+.tl-regla { position: relative; height: 18px; cursor: ew-resize; touch-action: none; min-width: 100%; }
+.tl-marca { position: absolute; top: 3px; font-size: 9.5px; color: var(--tenue); border-left: 1px solid var(--linea2); padding-left: 3px; white-space: nowrap; pointer-events: none; }
+.tl-pista { position: relative; display: flex; gap: 4px; align-items: stretch; }
+.tl-cuadro { position: relative; flex: none; display: flex; align-items: center; justify-content: center; border: 2px solid var(--linea); border-radius: 5px; background: #2a2d33; cursor: pointer; padding: 3px 2px 2px; user-select: none; touch-action: none; }
+.tl-cuadro:hover { border-color: var(--linea2); }
+.tl-cuadro.sel { border-color: var(--oro); background: #3a3523; }
+.tl-cuadro.actual { box-shadow: 0 0 0 1px #fff inset; }
+.tl-cuadro .nro { position: absolute; left: 4px; top: 1px; font-size: 10px; color: var(--tenue); pointer-events: none; }
+.tl-cuadro .tl-dur { position: absolute; right: 9px; bottom: 1px; font-size: 9.5px; color: var(--oro2); pointer-events: none; }
+.tl-cuadro .tl-borde { position: absolute; right: -2px; top: 0; bottom: 0; width: 7px; cursor: ew-resize; border-right: 2px solid transparent; }
+.tl-cuadro:hover .tl-borde { border-right-color: var(--oro); }
+.tl-cuadro canvas { display: block; pointer-events: none; }
+.tl-aguja { position: absolute; top: -18px; bottom: 0; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.5); pointer-events: none; z-index: 2; }
+.tl-insertar { position: absolute; top: 0; bottom: 0; width: 3px; background: var(--oro); border-radius: 2px; z-index: 3; pointer-events: none; }
+.item.duda { box-shadow: inset 3px 0 0 var(--oro); }
+.pose-imp { display: grid; grid-template-columns: 20px 40px minmax(0, 1fr) 130px 130px; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 6px; background: var(--hueco); border: 1px solid var(--linea); }
+.pose-imp.duda { border-color: var(--oro); } .pose-imp .nombre { font-size: 12px; } .pose-imp .sub { font-size: 10.5px; color: var(--tenue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .pose-imp select { width: 100%; }

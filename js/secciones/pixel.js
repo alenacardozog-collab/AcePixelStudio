@@ -25,7 +25,8 @@
     { id: 'selRect', ico: 'selRect', tip: 'Selección rectangular', desc: 'Marca un rectángulo. Lo que hagas después solo afecta ahí adentro.', tecla: 'S', est: 'Arrastrar: seleccionar · Arrastrar adentro: mover · Mayús: sumar · Esc: soltar' },
     { id: 'lazo', ico: 'lazo', tip: 'Lazo', desc: 'Selección a mano alzada.', tecla: 'Q', est: 'Arrastrar: rodear la zona' },
     { id: 'varita', ico: 'varita', tip: 'Varita', desc: 'Selecciona toda una zona del mismo color.', tecla: 'W', est: 'Clic: seleccionar ese color · Mayús: sumar' },
-    { id: 'mover', ico: 'mover', tip: 'Mover', desc: 'Mueve la selección, o toda la capa si no hay nada seleccionado.', tecla: 'V', est: 'Arrastrar: mover · Flechas: de a 1 píxel' }
+    { id: 'mover', ico: 'mover', tip: 'Mover', desc: 'Mueve la selección, o toda la capa si no hay nada seleccionado.', tecla: 'V', est: 'Arrastrar: mover · Flechas: de a 1 píxel' },
+    { id: 'transformar', ico: 'escalar', tip: 'Transformar', desc: 'Rota, escala y voltea lo seleccionado (o toda la capa) con manijas. Sirve con Selección, Lazo y Varita.', tecla: 'T', est: 'Esquinas: escalar (Mayús: proporcional) · Bordes: estirar · Afuera o la manija de arriba: rotar (Mayús: de a 15°) · Adentro: mover · Enter: aplicar · Esc: cancelar · Clic derecho: más opciones' }
   ];
 
   // ---------------------------------------------------------------- documento
@@ -91,7 +92,7 @@
     CK.ctx(c).putImageData(cd, 0, 0); escribir(d); flot = { c, x: 0, y: 0, m: m.slice(), fin, todo: !sel };
   };
   const soltarFlot = () => {
-    if (!flot || !doc) return; const f = FR(), x = CK.ctx(capa().c); x.save(); x.beginPath(); x.rect(f.x, f.y, f.w, f.h); x.clip(); x.drawImage(flot.c, f.x + flot.x, f.y + flot.y); x.restore();
+    tr = null; if (!flot || !doc) return; const f = FR(), x = CK.ctx(capa().c); x.save(); x.beginPath(); x.rect(f.x, f.y, f.w, f.h); x.clip(); x.drawImage(flot.c, f.x + flot.x, f.y + flot.y); x.restore();
     if (!flot.todo) { const m = new Uint8Array(f.w * f.h); for (let y = 0; y < f.h; y++) for (let xx = 0; xx < f.w; xx++) { const sx = xx - flot.x, sy = y - flot.y; if (sx >= 0 && sy >= 0 && sx < flot.c.width && sy < flot.c.height && flot.m[sy * flot.c.width + sx]) m[y * f.w + xx] = 1; } const b = cajaMascara(m, f.w, f.h); sel = b ? { m, b } : null; } else sel = null;
     const fin = flot.fin; flot = null; fin(); pedir();
   };
@@ -103,6 +104,101 @@
     CK.ctx(nc).putImageData(new ImageData(new Uint8ClampedArray(r.d), r.w, r.h), b.x, b.y); for (let y = 0; y < rm.h; y++) for (let x = 0; x < rm.w; x++) if (rm.d[(y * rm.w + x) * 4 + 3]) nm[(b.y + y) * nc.width + b.x + x] = 1;
     flot.c = nc; flot.m = nm; flot.todo = false; pedir();
   };
+  // ---------------------------------------------------------------- transformación libre (rotar, escalar, voltear)
+  let tr = null;
+  /** Escala ×2 que respeta los bordes del pixel art (Scale2x / EPX). Con tres pasadas queda ×8 para rotar limpio (idea de RotSprite). */
+  const scale2x = im => { const W = im.w, H = im.h, o = PIX.make(W * 2, H * 2), d = im.d, igual = (a, b) => d[a] === d[b] && d[a + 1] === d[b + 1] && d[a + 2] === d[b + 2] && d[a + 3] === d[b + 3]; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const P = (y * W + x) * 4, A = y > 0 ? P - W * 4 : P, B = x < W - 1 ? P + 4 : P, C = x > 0 ? P - 4 : P, D = y < H - 1 ? P + W * 4 : P; const e = [igual(C, A) && !igual(C, D) && !igual(A, B) ? A : P, igual(A, B) && !igual(A, C) && !igual(B, D) ? B : P, igual(D, C) && !igual(D, B) && !igual(C, A) ? C : P, igual(B, D) && !igual(B, A) && !igual(D, C) ? D : P]; [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([ox, oy], k) => { const q = ((y * 2 + oy) * W * 2 + x * 2 + ox) * 4; for (let c = 0; c < 4; c++) o.d[q + c] = d[e[k] + c]; }); } return o; };
+  const empezarTr = () => {
+    if (!doc) return; const f = FR(); if (!flot) { if (!sel) { const m = new Uint8Array(f.w * f.h).fill(1); sel = { m, b: { x: 0, y: 0, w: f.w, h: f.h } }; } levantar(); }
+    const fd = CK.ctx(flot.c).getImageData(0, 0, flot.c.width, flot.c.height).data, mm = flot.m.map((v, i) => v && fd[i * 4 + 3] > 0 ? 1 : 0);   // solo lo que tiene dibujo
+    const b = cajaMascara(mm, flot.c.width, flot.c.height); if (!b) { CK.aviso('No hay nada dibujado para transformar.', 'info'); return; }
+    const im = PIX.crop(CK.aPix(flot.c), b.x, b.y, b.w, b.h); for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) if (!flot.m[(b.y + y) * flot.c.width + b.x + x]) im.d[(y * b.w + x) * 4 + 3] = 0;
+    tr = { im, bw: b.w, bh: b.h, cx: flot.x + b.x + b.w / 2, cy: flot.y + b.y + b.h / 2, sx: 1, sy: 1, ang: 0, suave: !!S.trSuave, ocho: null, antes: { c: CK.copiaLienzo(flot.c), m: flot.m.slice(), x: flot.x, y: flot.y } };
+    pintarTira(); pedir();
+  };
+  /** Rehace el flotante a partir del original con la escala y el giro actuales (vecino más cercano: no inventa colores). */
+  const aplicarTr = () => {
+    if (!tr || !flot) return; const { bw, bh, sx, sy, ang } = tr, co = Math.cos(ang), si = Math.sin(ang), hw = bw * Math.abs(sx) / 2, hh = bh * Math.abs(sy) / 2;
+    const ex = Math.abs(hw * co) + Math.abs(hh * si), ey = Math.abs(hw * si) + Math.abs(hh * co);
+    const x0 = Math.floor(tr.cx - ex + 1e-6), y0 = Math.floor(tr.cy - ey + 1e-6), x1 = Math.ceil(tr.cx + ex - 1e-6), y1 = Math.ceil(tr.cy + ey - 1e-6), W = Math.max(1, x1 - x0), H = Math.max(1, y1 - y0);
+    const recto = Math.abs(Math.round(ang / (Math.PI / 2)) * (Math.PI / 2) - ang) < 1e-4, suave = tr.suave && !recto;
+    if (suave && !tr.ocho) tr.ocho = scale2x(scale2x(scale2x(tr.im)));
+    const src = suave ? tr.ocho : tr.im, K = suave ? 8 : 1, out = new ImageData(W, H), m = new Uint8Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const dx = x0 + x + 0.5 - tr.cx, dy = y0 + y + 0.5 - tr.cy, u = (dx * co + dy * si) / sx + bw / 2, v = (-dx * si + dy * co) / sy + bh / 2;
+      if (u < 0 || v < 0 || u >= bw || v >= bh) continue; const px = Math.min(src.w - 1, Math.floor(u * K)), py = Math.min(src.h - 1, Math.floor(v * K)), i = (py * src.w + px) * 4; if (src.d[i + 3] < 8) continue;
+      const o = (y * W + x) * 4; out.data[o] = src.d[i]; out.data[o + 1] = src.d[i + 1]; out.data[o + 2] = src.d[i + 2]; out.data[o + 3] = src.d[i + 3]; m[y * W + x] = 1;
+    }
+    const c = CK.lienzo(W, H); CK.ctx(c).putImageData(out, 0, 0); flot.c = c; flot.m = m; flot.x = x0; flot.y = y0; flot.todo = false; pedir();
+  };
+  const cancelarTr = () => { if (!tr || !flot) { tr = null; return; } const a = tr.antes; flot.c = a.c; flot.m = a.m; flot.x = a.x; flot.y = a.y; tr = null; pintarTira(); pedir(); };
+  const terminarTr = () => { if (!tr) return; tr = null; pintarTira(); pedir(); CK.estado('Transformación lista: arrastrala o hacé clic afuera / Enter para fijarla.'); };
+  /** Esquinas y manijas de la transformación, en coordenadas de la pantalla. */
+  const manijasTr = v => {
+    const co = Math.cos(tr.ang), si = Math.sin(tr.ang), hw = tr.bw * Math.abs(tr.sx) / 2, hh = tr.bh * Math.abs(tr.sy) / 2, P = (lx, ly) => ({ x: v.tx + (tr.cx + lx * co - ly * si) * v.z, y: v.ty + (tr.cy + lx * si + ly * co) * v.z });
+    const l = []; [-1, 0, 1].forEach(hx => [-1, 0, 1].forEach(hy => { if (hx || hy) l.push(Object.assign(P(hx * hw, hy * hh), { hx, hy })); }));
+    const arriba = P(0, -hh), rot = { x: arriba.x + si * 22, y: arriba.y - co * 22, rot: true };
+    return { esquinas: [P(-hw, -hh), P(hw, -hh), P(hw, hh), P(-hw, hh)], l, rot, arriba };
+  };
+  const dentroTr = (v, sx0, sy0) => { const co = Math.cos(tr.ang), si = Math.sin(tr.ang), wx = (sx0 - v.tx) / v.z - tr.cx, wy = (sy0 - v.ty) / v.z - tr.cy, lx = wx * co + wy * si, ly = -wx * si + wy * co; return Math.abs(lx) <= tr.bw * Math.abs(tr.sx) / 2 && Math.abs(ly) <= tr.bh * Math.abs(tr.sy) / 2; };
+  const trBajar = m => {
+    if (!tr) { empezarTr(); if (!tr) return; }
+    const v = vista, mj = manijasTr(v), cerca = q => Math.hypot(q.x - m.sx, q.y - m.sy) <= 8;
+    const base = { cx: tr.cx, cy: tr.cy, sx: tr.sx, sy: tr.sy, ang: tr.ang, mx: m.x, my: m.y };
+    if (cerca(mj.rot)) { trazo = { tipo: 'tr', modo: 'rotar', base, a0: Math.atan2(m.y - tr.cy, m.x - tr.cx) }; return; }
+    const h0 = mj.l.find(cerca); if (h0) { const co = Math.cos(tr.ang), si = Math.sin(tr.ang), hw = tr.bw * Math.abs(tr.sx) / 2, hh = tr.bh * Math.abs(tr.sy) / 2; trazo = { tipo: 'tr', modo: 'escalar', base, hx: h0.hx, hy: h0.hy, O: { x: -h0.hx * hw, y: -h0.hy * hh }, co, si }; return; }
+    if (dentroTr(v, m.sx, m.sy)) { trazo = { tipo: 'tr', modo: 'mover', base }; return; }
+    trazo = { tipo: 'tr', modo: 'rotar', base, a0: Math.atan2(m.y - tr.cy, m.x - tr.cx) };
+  };
+  const trMover = m => {
+    const t = trazo, b = t.base;
+    if (t.modo === 'mover') { tr.cx = b.cx + Math.round(m.x - b.mx); tr.cy = b.cy + Math.round(m.y - b.my); }
+    else if (t.modo === 'rotar') { let a = b.ang + Math.atan2(m.y - b.cy, m.x - b.cx) - t.a0; const paso = m.shift ? 15 : 1; a = Math.round(a * 180 / Math.PI / paso) * paso * Math.PI / 180; tr.ang = a; CK.estado('Giro: ' + Math.round(((a * 180 / Math.PI) % 360 + 360) % 360) + '°'); }
+    else {
+      const wx = m.x - b.cx, wy = m.y - b.cy, lx = wx * t.co + wy * t.si, ly = -wx * t.si + wy * t.co, sgx = Math.sign(b.sx) || 1, sgy = Math.sign(b.sy) || 1;
+      let nw = t.hx ? Math.max(1, Math.round((lx - t.O.x) * t.hx)) : tr.bw * Math.abs(b.sx), nh = t.hy ? Math.max(1, Math.round((ly - t.O.y) * t.hy)) : tr.bh * Math.abs(b.sy);
+      if (m.shift && t.hx && t.hy) { const k = Math.max(nw / (tr.bw * Math.abs(b.sx)), nh / (tr.bh * Math.abs(b.sy))); nw = Math.max(1, Math.round(tr.bw * Math.abs(b.sx) * k)); nh = Math.max(1, Math.round(tr.bh * Math.abs(b.sy) * k)); }
+      tr.sx = sgx * nw / tr.bw; tr.sy = sgy * nh / tr.bh;
+      const clx = t.hx ? t.O.x + t.hx * nw / 2 : 0, cly = t.hy ? t.O.y + t.hy * nh / 2 : 0;
+      tr.cx = b.cx + clx * t.co - cly * t.si; tr.cy = b.cy + clx * t.si + cly * t.co;
+      CK.estado('Tamaño: ' + nw + ' × ' + nh + ' px (' + Math.round(nw / tr.bw * 100) + '% × ' + Math.round(nh / tr.bh * 100) + '%)');
+    }
+    aplicarTr();
+  };
+  /** Cambios rápidos sobre la transformación (girar, voltear, escalar) — la empiezan si hace falta. */
+  const trRapido = fn => { if (!tr) empezarTr(); if (!tr) return; fn(tr); aplicarTr(); pintarTira(); };
+  const trNumeros = async () => {
+    if (!tr) empezarTr(); if (!tr) return; const d = { w: Math.round(Math.abs(tr.sx) * 100), h: Math.round(Math.abs(tr.sy) * 100), ang: Math.round(tr.ang * 180 / Math.PI), fh: tr.sx < 0, fv: tr.sy < 0, suave: tr.suave, prop: true };
+    let iw, ih; const ok = await CK.ventana({ titulo: 'Transformar', cuerpo: h('div', h('div.duo', h('label', h('span.mini-rot', 'Ancho %'), iw = CK.num(d.w, { min: 1, max: 2000 }, v => { if (d.prop) { d.h = Math.round(d.h * v / d.w); ih.value = d.h; } d.w = v; })), h('label', h('span.mini-rot', 'Alto %'), ih = CK.num(d.h, { min: 1, max: 2000 }, v => { if (d.prop) { d.w = Math.round(d.w * v / d.h); iw.value = d.w; } d.h = v; }))), CK.chk(d.prop, 'Mantener proporción', v => { d.prop = v; }),
+      CK.campo('Girar (°)', CK.num(d.ang, { min: -360, max: 360 }, v => { d.ang = v; })), CK.chk(d.fh, 'Voltear horizontal', v => { d.fh = v; }), CK.chk(d.fv, 'Voltear vertical', v => { d.fv = v; }),
+      CK.chk(d.suave, 'Giro limpio para pixel art (RotSprite)', v => { d.suave = v; }, 'Agranda ×8 respetando los bordes antes de girar: las líneas inclinadas quedan sin dientes raros. Solo cambia algo en ángulos que no son de 90°.'), h('p.nota-txt', 'Nunca inventa colores: cada píxel nuevo copia uno del original.')), botones: [{ txt: 'Cancelar', valor: false }, { txt: 'Aplicar', cls: 'pri', valor: true }] });
+    if (!ok) return; tr.sx = (d.fh ? -1 : 1) * d.w / 100; tr.sy = (d.fv ? -1 : 1) * d.h / 100; tr.ang = d.ang * Math.PI / 180; tr.suave = S.trSuave = d.suave; tr.ocho = null; aplicarTr(); pintarTira();
+  };
+  const menuLienzo = e => {
+    const hay = !!(sel || flot), A0 = A(); if (!A0) return;
+    CK.menu(e, [
+      hay ? { titulo: tr ? 'Transformando' : 'Selección' } : { titulo: A0.nombre },
+      tr ? { txt: 'Aplicar transformación', ico: 'ok', tecla: 'Enter', on: () => { terminarTr(); } } : null, tr ? { txt: 'Cancelar transformación', ico: 'cerrar', tecla: 'Esc', on: cancelarTr } : null,
+      hay ? { txt: 'Copiar', ico: 'duplicar', tecla: 'Ctrl + C', on: () => copiar() } : null, hay ? { txt: 'Cortar', ico: 'recortar', tecla: 'Ctrl + X', on: () => copiar(true) } : null,
+      { txt: 'Pegar', ico: 'duplicar', tecla: 'Ctrl + V', off: !portaSel, on: pegar },
+      hay ? { txt: 'Borrar lo seleccionado', ico: 'basura', tecla: 'Supr', on: borrarSel } : null,
+      '-',
+      { txt: 'Transformar libre', ico: 'escalar', tecla: 'T', on: () => ponerHerr('transformar') },
+      { txt: 'Rotar', ico: 'rotar', sub: [{ txt: '90° a la derecha', on: () => trRapido(t => { t.ang += Math.PI / 2; }) }, { txt: '90° a la izquierda', on: () => trRapido(t => { t.ang -= Math.PI / 2; }) }, { txt: '180°', on: () => trRapido(t => { t.ang += Math.PI; }) }, '-', { txt: '45°', on: () => trRapido(t => { t.ang += Math.PI / 4; }) }, { txt: '15°', on: () => trRapido(t => { t.ang += Math.PI / 12; }) }, { txt: '−15°', on: () => trRapido(t => { t.ang -= Math.PI / 12; }) }] },
+      { txt: 'Escalar', ico: 'tamano', sub: [{ txt: '×2', on: () => trRapido(t => { t.sx *= 2; t.sy *= 2; }) }, { txt: '×3', on: () => trRapido(t => { t.sx *= 3; t.sy *= 3; }) }, { txt: '½', on: () => trRapido(t => { t.sx /= 2; t.sy /= 2; }) }, { txt: '150%', on: () => trRapido(t => { t.sx *= 1.5; t.sy *= 1.5; }) }, { txt: '75%', on: () => trRapido(t => { t.sx *= 0.75; t.sy *= 0.75; }) }] },
+      { txt: 'Voltear horizontal', ico: 'voltearH', on: () => trRapido(t => { t.sx = -t.sx; }) }, { txt: 'Voltear vertical', ico: 'voltearV', on: () => trRapido(t => { t.sy = -t.sy; }) },
+      { txt: 'Transformar con números…', ico: 'ajustes', on: trNumeros },
+      { txt: 'Giro limpio (RotSprite)', ico: 'pixel', activo: !!S.trSuave, on: () => { S.trSuave = !S.trSuave; if (tr) { tr.suave = S.trSuave; tr.ocho = null; aplicarTr(); } } },
+      '-',
+      hay ? { txt: 'A capa nueva', ico: 'capas', on: () => selACapa(false) } : null, hay ? { txt: 'A asset nuevo', ico: 'assets', on: () => aAssetNuevo(false) } : null,
+      { txt: 'Seleccionar todo', ico: 'selRect', tecla: 'Ctrl + A', on: () => { soltarFlot(); const f = FR(); ponerSel(new Uint8Array(f.w * f.h).fill(1)); } },
+      hay ? { txt: 'Invertir selección', ico: 'selRect', on: () => { soltarFlot(); if (!sel) return; const m = sel.m.map(v => v ? 0 : 1); ponerSel(m); } } : null,
+      hay ? { txt: 'Soltar la selección', ico: 'cerrar', tecla: 'Esc', on: () => { soltarFlot(); sel = null; pintarTira(); pedir(); } } : null,
+      '-',
+      { txt: 'Ver todo', ico: 'centrar', tecla: '0', on: () => { const f = FR(); vista.encuadrar(f.w, f.h, 40); } }, { txt: 'Grilla', ico: 'grilla', activo: S.grilla, on: () => { S.grilla = !S.grilla; pintarTira(); pedir(); } }
+    ]);
+  };
+
   /** Lo seleccionado, recortado a su caja: { c: lienzo, b: caja, cd: píxeles del cuadro } (o null). */
   const recorteSel = () => { soltarFlot(); if (!sel) { CK.aviso('Primero marcá la parte que querés separar: Selección (S), Lazo (Q) o Varita (W).', 'info', 4500); return null; } const f = FR(), d = leer(), cd = new ImageData(f.w, f.h); let n = 0; for (let p = 0; p < sel.m.length; p++) if (sel.m[p] && d.data[p * 4 + 3] > 0) { n++; for (let k = 0; k < 4; k++) cd.data[p * 4 + k] = d.data[p * 4 + k]; } if (!n) { CK.aviso('En esa selección no hay nada dibujado en la capa activa.', 'info'); return null; } return { f, d, cd }; };
   /** Corta lo seleccionado de la capa activa y lo deja en una capa nueva, en el mismo lugar. */
@@ -127,11 +223,13 @@
   const P = m => ({ x: Math.floor(m.x), y: Math.floor(m.y) });
   const dentroSel = p => { if (flot) { const sx = p.x - flot.x, sy = p.y - flot.y; return sx >= 0 && sy >= 0 && sx < flot.c.width && sy < flot.c.height && !!flot.m[sy * flot.c.width + sx]; } const f = FR(); return !!(sel && p.x >= 0 && p.y >= 0 && p.x < f.w && p.y < f.h && sel.m[p.y * f.w + p.x]); };
   const herramienta = {
-    pasar(m) { const p = P(m), f = FR(); S.cursor = p; CK.estadoDer(p.x >= 0 && p.y >= 0 && p.x < f.w && p.y < f.h ? p.x + ', ' + p.y + (colorEn(p.x, p.y, true) ? '  ·  ' + colorEn(p.x, p.y, true).toUpperCase() : '') : ''); if (!CK._espacio) vista.c.style.cursor = (S.herr === 'mover' || (['selRect', 'lazo', 'varita'].includes(S.herr) && dentroSel(p))) ? 'move' : 'crosshair'; pedir(); },
+    pasar(m) { const p = P(m), f = FR(); S.cursor = p; if (S.herr === 'transformar' && tr) { const mj = manijasTr(vista), cerca = q => Math.hypot(q.x - m.sx, q.y - m.sy) <= 8, hm = mj.l.find(cerca); vista.c.style.cursor = cerca(mj.rot) ? 'alias' : hm ? (hm.hx && hm.hy ? (hm.hx === hm.hy ? 'nwse-resize' : 'nesw-resize') : hm.hx ? 'ew-resize' : 'ns-resize') : dentroTr(vista, m.sx, m.sy) ? 'move' : 'alias'; pedir(); return; } CK.estadoDer(p.x >= 0 && p.y >= 0 && p.x < f.w && p.y < f.h ? p.x + ', ' + p.y + (colorEn(p.x, p.y, true) ? '  ·  ' + colorEn(p.x, p.y, true).toUpperCase() : '') : ''); if (!CK._espacio) vista.c.style.cursor = (S.herr === 'mover' || (['selRect', 'lazo', 'varita'].includes(S.herr) && dentroSel(p))) ? 'move' : 'crosshair'; pedir(); },
     salir() { S.cursor = null; pedir(); },
     bajar(m) {
       if (!doc) return; const p = P(m), der = m.boton === 2, f = FR(), hh = S.herr, k = capa(); S.cursor = p;
       if (!k.visible && !['gotero', 'selRect', 'lazo', 'varita'].includes(hh)) { CK.aviso('La capa activa está oculta.', 'info'); return; }
+      if (der && ['selRect', 'lazo', 'varita', 'mover', 'transformar'].includes(hh)) return;          // clic derecho: menú de opciones
+      if (hh === 'transformar') { trBajar(m); return; }
       if (m.alt || hh === 'gotero') { const c = colorEn(p.x, p.y, true); if (c) { if (der) S.c2 = c; else S.c1 = c; pintarColor(); } return; }
       if (flot && !dentroSel(p) && hh !== 'mover') soltarFlot();
       if (hh === 'mover' || (['selRect', 'lazo', 'varita'].includes(hh) && dentroSel(p) && !m.shift)) { levantar(); trazo = { tipo: 'mover', p0: p, x0: flot.x, y0: flot.y }; return; }
@@ -150,6 +248,7 @@
     },
     mover(m) {
       const p = P(m), t = trazo; S.cursor = p; if (!t) return;
+      if (t.tipo === 'tr') { trMover(m); return; }
       if (t.tipo === 'mover') { flot.x = t.x0 + p.x - t.p0.x; flot.y = t.y0 + p.y - t.p0.y; pedir(); return; }
       if (['lapiz', 'borrador', 'sombrear'].includes(t.tipo)) { if (S.ultimo && (S.ultimo.x !== p.x || S.ultimo.y !== p.y)) { const pts = []; bres(S.ultimo.x, S.ultimo.y, p.x, p.y, (x, y) => pts.push({ x, y })); pts.slice(1).forEach(puntoTrazo); S.ultimo = p; pedir(); } return; }
       if (t.tipo === 'forma' || t.tipo === 'selRect') { let b = p; if (m.shift) { const dx = p.x - t.a.x, dy = p.y - t.a.y; if (t.forma === 'linea') { if (Math.abs(dx) > Math.abs(dy) * 2) b = { x: p.x, y: t.a.y }; else if (Math.abs(dy) > Math.abs(dx) * 2) b = { x: t.a.x, y: p.y }; else { const n = Math.max(Math.abs(dx), Math.abs(dy)); b = { x: t.a.x + Math.sign(dx) * n, y: t.a.y + Math.sign(dy) * n }; } } else if (t.tipo === 'forma') { const n = Math.max(Math.abs(dx), Math.abs(dy)); b = { x: t.a.x + Math.sign(dx || 1) * n, y: t.a.y + Math.sign(dy || 1) * n }; } } t.b = b; pedir(); return; }
@@ -157,6 +256,7 @@
     },
     subir() {
       const t = trazo, f = FR(); trazo = null; if (!t) return;
+      if (t.tipo === 'tr') { pintarTira(); return; }
       if (['lapiz', 'borrador', 'sombrear'].includes(t.tipo)) { t.x.restore(); t.fin(); pedir(); return; }
       if (t.tipo === 'forma') { const fin = cambioCapa({ linea: 'Línea', rect: 'Rectángulo', elipse: 'Elipse' }[t.forma]), x = ctxCapa(); formaPts(t.forma, t.a, t.b, S.relleno).forEach(([qx, qy]) => sello(x, qx, qy, t.color, t.forma === 'linea' || !S.relleno ? S.tam : 1)); x.restore(); fin(); pedir(); return; }
       if (t.tipo === 'selRect') { const x0 = CK.clamp(Math.min(t.a.x, t.b.x), 0, f.w - 1), x1 = CK.clamp(Math.max(t.a.x, t.b.x), 0, f.w - 1), y0 = CK.clamp(Math.min(t.a.y, t.b.y), 0, f.h - 1), y1 = CK.clamp(Math.max(t.a.y, t.b.y), 0, f.h - 1), m = new Uint8Array(f.w * f.h); if (t.a.x !== t.b.x || t.a.y !== t.b.y) for (let y = y0; y <= y1; y++) m.fill(1, y * f.w + x0, y * f.w + x1 + 1); ponerSel(m, t.sumar); return; }
@@ -191,6 +291,8 @@
     if (ms && !(flot && flot.todo)) { x.beginPath(); for (let y = 0; y < ms.h; y++) for (let i = 0; i < ms.w; i++) { if (!ms.m[y * ms.w + i]) continue; const px = v.tx + (i + ms.ox) * z, py = v.ty + (y + ms.oy) * z; if (y === 0 || !ms.m[(y - 1) * ms.w + i]) { x.moveTo(px, py + .5); x.lineTo(px + z, py + .5); } if (y === ms.h - 1 || !ms.m[(y + 1) * ms.w + i]) { x.moveTo(px, py + z - .5); x.lineTo(px + z, py + z - .5); } if (i === 0 || !ms.m[y * ms.w + i - 1]) { x.moveTo(px + .5, py); x.lineTo(px + .5, py + z); } if (i === ms.w - 1 || !ms.m[y * ms.w + i + 1]) { x.moveTo(px + z - .5, py); x.lineTo(px + z - .5, py + z); } } x.strokeStyle = '#111'; x.stroke(); x.setLineDash([4, 4]); x.strokeStyle = '#fff'; x.stroke(); x.setLineDash([]); }
     if (trazo && trazo.tipo === 'selRect') { const x0 = Math.min(trazo.a.x, trazo.b.x), y0 = Math.min(trazo.a.y, trazo.b.y), w = Math.abs(trazo.b.x - trazo.a.x) + 1, hh = Math.abs(trazo.b.y - trazo.a.y) + 1; x.setLineDash([4, 4]); x.strokeStyle = '#fff'; x.strokeRect(v.tx + x0 * z + .5, v.ty + y0 * z + .5, w * z - 1, hh * z - 1); x.setLineDash([]); }
     if (trazo && trazo.tipo === 'lazo') { x.beginPath(); trazo.pts.forEach((p, i) => { const px = v.tx + (p.x + .5) * z, py = v.ty + (p.y + .5) * z; if (i) x.lineTo(px, py); else x.moveTo(px, py); }); x.strokeStyle = '#fff'; x.setLineDash([4, 4]); x.stroke(); x.setLineDash([]); }
+    if (tr && flot) { const mj = manijasTr(v); x.beginPath(); mj.esquinas.forEach((q, i) => i ? x.lineTo(q.x, q.y) : x.moveTo(q.x, q.y)); x.closePath(); x.strokeStyle = '#000'; x.lineWidth = 3; x.stroke(); x.strokeStyle = '#58d0ff'; x.lineWidth = 1; x.stroke(); x.beginPath(); x.moveTo(mj.arriba.x, mj.arriba.y); x.lineTo(mj.rot.x, mj.rot.y); x.stroke();
+      mj.l.forEach(q => { x.fillStyle = '#fff'; x.strokeStyle = '#000'; x.fillRect(q.x - 4, q.y - 4, 8, 8); x.strokeRect(q.x - 4.5, q.y - 4.5, 9, 9); }); x.beginPath(); x.arc(mj.rot.x, mj.rot.y, 5, 0, 7); x.fillStyle = '#58d0ff'; x.fill(); x.strokeStyle = '#000'; x.stroke(); x.lineWidth = 1; }
     const c = S.cursor; if (c && !trazo && ['lapiz', 'borrador', 'sombrear', 'linea', 'rect', 'elipse'].includes(S.herr)) { const o = Math.floor((S.tam - 1) / 2); espejos(c.x, c.y, (ex, ey) => { if (S.redonda && S.tam > 2) { const rr = S.tam * z / 2, ccx = v.tx + (ex - o) * z + rr, ccy = v.ty + (ey - o) * z + rr; x.strokeStyle = '#000'; x.beginPath(); x.arc(ccx, ccy, rr + .5, 0, 7); x.stroke(); x.strokeStyle = '#fff'; x.beginPath(); x.arc(ccx, ccy, Math.max(.5, rr - .5), 0, 7); x.stroke(); return; } x.strokeStyle = '#000'; x.strokeRect(v.tx + (ex - o) * z - .5, v.ty + (ey - o) * z - .5, S.tam * z + 1, S.tam * z + 1); x.strokeStyle = '#fff'; x.strokeRect(v.tx + (ex - o) * z + .5, v.ty + (ey - o) * z + .5, S.tam * z - 1, S.tam * z - 1); }); }
     x.restore();
   };
@@ -241,7 +343,7 @@
     if (!cuadrosEl) return; CK.vaciar(cuadrosEl); const a = A(); if (!a) return;
     if (!a.cuadros) { cuadrosEl.append(h('span.ayuda-txt', { style: { alignSelf: 'center' } }, 'Imagen fija.'), CK.btn({ ico: 'anim', txt: 'Convertir en animación', cls: 'chico', desc: 'Divide la imagen en cuadros (o le agrega un segundo cuadro) para animarla cuadro a cuadro.', on: async () => { const d = { fw: a.w, fh: a.h }; const ok = await CK.ventana({ titulo: 'Convertir en animación', cuerpo: h('div', h('p', 'Si la imagen ya es una tira de poses, poné el tamaño de cada cuadro. Si es un solo dibujo, dejalo así: se crea como primer cuadro.'), CK.campo('Ancho del cuadro', CK.num(d.fw, { min: 1, max: a.w }, v => { d.fw = v; })), CK.campo('Alto del cuadro', CK.num(d.fh, { min: 1, max: a.h }, v => { d.fh = v; }))), botones: [{ txt: 'Cancelar', valor: false }, { txt: 'Convertir', cls: 'pri', valor: true }] }); if (!ok) return; estructura('Convertir en animación', () => { a.cuadros = { fw: d.fw, fh: d.fh, fps: 8, bucle: true }; if (a.tipo === 'sprite') a.tipo = 'hoja'; }); const g = FR(); vista.encuadrar(g.w, g.h, 40); } }), cajaNueva()); return; }
     const n = CK.asset.nCuadros(a), alto = 56;
-    for (let i = 0; i < n; i++) { const g = CK.asset.cuadro(a, i), mini = CK.mini(CK.img[a.id], alto, g); const caja = h('div.cuadro' + (i === doc.cuadro ? '.activo' : ''), { onclick: () => irCuadro(i) }, h('span.nro', String(i + 1)), mini); recibeCapa(caja, (ci, copiar) => capaACuadro(ci, i, copiar, false)); cuadrosEl.append(caja); }
+    for (let i = 0; i < n; i++) { const g = CK.asset.cuadro(a, i), mini = CK.mini(CK.img[a.id], alto, g); const caja = h('div.cuadro' + (i === doc.cuadro ? '.activo' : ''), { onclick: () => irCuadro(i), oncontextmenu: e => { irCuadro(i); CK.menu(e, [{ titulo: 'Cuadro ' + (i + 1) }, { txt: 'Duplicar', ico: 'duplicar', on: () => opCuadros('Duplicar cuadro', fs => { fs.forEach(l => l.splice(i + 1, 0, PIX.clone(l[i]))); doc.cuadro = i + 1; }) }, { txt: 'Cuadro vacío después', ico: 'mas', on: () => opCuadros('Cuadro nuevo', fs => { fs.forEach(l => l.splice(i + 1, 0, PIX.make(l[0].w, l[0].h))); doc.cuadro = i + 1; }) }, { txt: 'Mover antes', ico: 'anterior', off: i === 0, on: () => opCuadros('Ordenar cuadros', fs => { fs.forEach(l => { const t = l[i]; l[i] = l[i - 1]; l[i - 1] = t; }); doc.cuadro = i - 1; }) }, { txt: 'Mover después', ico: 'siguiente', off: i === n - 1, on: () => opCuadros('Ordenar cuadros', fs => { fs.forEach(l => { const t = l[i]; l[i] = l[i + 1]; l[i + 1] = t; }); doc.cuadro = i + 1; }) }, { txt: 'Ver en la línea de tiempo', ico: 'anim', on: () => CK.ir('anim', { asset: a.id }) }, '-', { txt: 'Borrar cuadro', ico: 'basura', peligro: true, off: n < 2, on: () => opCuadros('Borrar cuadro', fs => fs.forEach(l => l.splice(i, 1))) }]); } }, h('span.nro', String(i + 1)), mini); recibeCapa(caja, (ci, copiar) => capaACuadro(ci, i, copiar, false)); cuadrosEl.append(caja); }
     cuadrosEl.append(cajaNueva());
     cuadrosEl.append(h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px', marginLeft: '8px' } },
       h('div.fila.junto', CK.btn({ ico: 'mas', tip: 'Cuadro nuevo', desc: 'Agrega un cuadro vacío después del actual.', cls: 'chico', on: () => opCuadros('Cuadro nuevo', fs => { fs.forEach(l => l.splice(doc.cuadro + 1, 0, PIX.make(l[0].w, l[0].h))); doc.cuadro++; }) }), CK.btn({ ico: 'duplicar', tip: 'Duplicar cuadro', desc: 'Copia el cuadro actual: la forma más rápida de hacer la pose siguiente.', cls: 'chico', on: () => opCuadros('Duplicar cuadro', fs => { fs.forEach(l => l.splice(doc.cuadro + 1, 0, PIX.clone(l[doc.cuadro]))); doc.cuadro++; }) }), CK.btn({ ico: 'basura', tip: 'Borrar cuadro', cls: 'chico peligro', on: () => { if (n < 2) return; opCuadros('Borrar cuadro', fs => fs.forEach(l => l.splice(doc.cuadro, 1))); } }),
@@ -282,7 +384,7 @@
   };
   const pCapas = c => {
     const l = h('div.lista');
-    doc.capas.slice().reverse().forEach((k, ri) => { const i = doc.capas.length - 1 - ri; l.append(h('div.item' + (i === doc.activa ? '.activo' : ''), { onclick: () => { soltarFlot(); doc.activa = i; tabs.refrescar(); }, ondblclick: async e => { if (e.target.closest('.btn')) return; const n = await CK.pedir('Nombre de la capa', 'Nombre', k.nombre); if (n) { k.nombre = n; guardarMeta(); CK.tocar(); tabs.refrescar(); } } }, CK.btn({ ico: k.visible ? 'ojo' : 'ojoNo', tip: k.visible ? 'Ocultar' : 'Mostrar', cls: k.visible ? 'encendido' : '', on: e => { e.stopPropagation(); k.visible = !k.visible; componer(); pedir(); tabs.refrescar(); } }), CK.mini(k.c, 24, FR()), h('span.nombre', k.nombre), h('span.sub', Math.round(k.opacidad * 100) + '%'))); });
+    doc.capas.slice().reverse().forEach((k, ri) => { const i = doc.capas.length - 1 - ri; l.append(h('div.item' + (i === doc.activa ? '.activo' : ''), { onclick: () => { soltarFlot(); doc.activa = i; tabs.refrescar(); }, ondblclick: async e => { if (e.target.closest('.btn')) return; const n = await CK.pedir('Nombre de la capa', 'Nombre', k.nombre); if (n) { k.nombre = n; guardarMeta(); CK.tocar(); tabs.refrescar(); } }, oncontextmenu: e => { soltarFlot(); doc.activa = i; tabs.refrescar(); menuCapa(e, i); } }, CK.btn({ ico: k.visible ? 'ojo' : 'ojoNo', tip: k.visible ? 'Ocultar' : 'Mostrar', cls: k.visible ? 'encendido' : '', on: e => { e.stopPropagation(); k.visible = !k.visible; componer(); pedir(); tabs.refrescar(); } }), CK.mini(k.c, 24, FR()), h('span.nombre', k.nombre), h('span.sub', Math.round(k.opacidad * 100) + '%'))); });
     [...l.children].forEach((fila, ri) => { const i = doc.capas.length - 1 - ri; fila.draggable = true; fila.addEventListener('dragstart', e => { arrCapa = i; e.dataTransfer.effectAllowed = 'copyMove'; e.dataTransfer.setData('text/plain', 'capa'); fila.style.opacity = '.45'; if (cuadrosEl) cuadrosEl.classList.add('esperando'); CK.estado('Soltá la capa sobre un cuadro de la tira de abajo: queda centrada ahí. Con Ctrl la copia en vez de moverla.'); }); fila.addEventListener('dragend', () => { arrCapa = null; fila.style.opacity = ''; if (cuadrosEl) { cuadrosEl.classList.remove('esperando'); cuadrosEl.querySelectorAll('.soltar').forEach(x => x.classList.remove('soltar')); } }); });
     const k = capa();
     c.append(h('div.bloque', h('h3.bloque-tit', 'Capas (arriba = adelante)'), l, h('p.nota-txt', { style: { margin: '6px 0 0' } }, 'Arrastrá una capa a un cuadro de la tira de abajo y queda centrada en ese cuadro.'), h('div.fila', { style: { marginTop: '8px' } },
@@ -295,6 +397,18 @@
       CK.btn({ ico: 'capas', tip: 'Unir con la de abajo', desc: 'Funde la capa activa con la que tiene debajo.', cls: 'chico', on: () => { if (doc.activa > 0) estructura('Unir capas', () => { const ab = doc.capas[doc.activa - 1], x = CK.ctx(ab.c); x.globalAlpha = k.opacidad; x.drawImage(k.c, 0, 0); x.globalAlpha = 1; doc.capas.splice(doc.activa, 1); doc.activa--; }); } }),
       CK.btn({ ico: 'basura', tip: 'Borrar capa', cls: 'chico peligro', on: () => { if (doc.capas.length > 1) estructura('Borrar capa', () => { doc.capas.splice(doc.activa, 1); doc.activa = Math.max(0, doc.activa - 1); }); else CK.aviso('Tiene que quedar al menos una capa.', 'info'); } })),
       CK.campo('Opacidad', CK.rango(Math.round(k.opacidad * 100), { min: 0, max: 100 }, (v, f) => { k.opacidad = v / 100; pedir(); if (f) { componer(); tabs.refrescar(); } }))));
+  };
+  const menuCapa = (e, i) => {
+    const k = doc.capas[i]; CK.menu(e, [{ titulo: k.nombre },
+      { txt: 'Renombrar…', ico: 'texto', on: async () => { const n = await CK.pedir('Nombre de la capa', 'Nombre', k.nombre); if (n) { k.nombre = n; guardarMeta(); CK.tocar(); tabs.refrescar(); } } },
+      { txt: k.visible ? 'Ocultar' : 'Mostrar', ico: k.visible ? 'ojoNo' : 'ojo', on: () => { k.visible = !k.visible; componer(); pedir(); tabs.refrescar(); } },
+      { txt: 'Duplicar', ico: 'duplicar', on: () => estructura('Duplicar capa', () => { doc.capas.splice(i + 1, 0, { id: 'c' + Date.now().toString(36), nombre: k.nombre + ' copia', visible: true, opacidad: k.opacidad, asset: null, c: CK.copiaLienzo(k.c) }); doc.activa = i + 1; }) },
+      { txt: 'Subir', ico: 'subir', off: i >= doc.capas.length - 1, on: () => estructura('Ordenar capas', () => { [doc.capas[i], doc.capas[i + 1]] = [doc.capas[i + 1], doc.capas[i]]; doc.activa = i + 1; }) },
+      { txt: 'Bajar', ico: 'bajar', off: i === 0, on: () => estructura('Ordenar capas', () => { [doc.capas[i], doc.capas[i - 1]] = [doc.capas[i - 1], doc.capas[i]]; doc.activa = i - 1; }) },
+      { txt: 'Unir con la de abajo', ico: 'capas', off: i === 0, on: () => estructura('Unir capas', () => { const ab = doc.capas[i - 1], x = CK.ctx(ab.c); x.globalAlpha = k.opacidad; x.drawImage(k.c, 0, 0); x.globalAlpha = 1; doc.capas.splice(i, 1); doc.activa = i - 1; }) },
+      { txt: 'Transformar la capa', ico: 'escalar', on: () => { sel = null; ponerHerr('transformar'); } },
+      { txt: 'Guardar como asset', ico: 'assets', on: () => aAssetNuevo(true) },
+      '-', { txt: 'Borrar capa', ico: 'basura', peligro: true, off: doc.capas.length < 2, on: () => estructura('Borrar capa', () => { doc.capas.splice(i, 1); doc.activa = Math.max(0, i - 1); }) }]);
   };
   const pVista = c => {
     const a = A(), caja = h('div', { style: { display: 'grid', placeItems: 'center', gap: '8px' } }); let esc = 2;
@@ -322,7 +436,8 @@
       inter('voltearV', 'Espejo vertical', 'Repite el dibujo arriba y abajo.', () => S.espV, v => { S.espV = v; }),
       inter('grilla', 'Grilla', 'Muestra la cuadrícula de píxeles (con zoom alto) y la de tiles.', () => S.grilla, v => { S.grilla = v; })));
     if (sel || flot) tira.append(h('div.tira', h('span.txt', 'Selección'),
-      CK.btn({ ico: 'voltearH', tip: 'Voltear selección', cls: 'chico plano', on: () => transformarSel('Voltear', PIX.flipH) }), CK.btn({ ico: 'voltearV', tip: 'Voltear vertical', cls: 'chico plano', on: () => transformarSel('Voltear', PIX.flipV) }), CK.btn({ ico: 'rotar', tip: 'Rotar 90°', desc: 'Gira la selección un cuarto de vuelta sin deformar píxeles.', cls: 'chico plano', on: () => transformarSel('Rotar', PIX.rot90) }),
+      CK.btn({ ico: 'voltearH', tip: 'Voltear selección', cls: 'chico plano', on: () => transformarSel('Voltear', PIX.flipH) }), CK.btn({ ico: 'voltearV', tip: 'Voltear vertical', cls: 'chico plano', on: () => transformarSel('Voltear', PIX.flipV) }), CK.btn({ ico: 'rotar', tip: 'Rotar 90°', desc: 'Gira la selección un cuarto de vuelta sin deformar píxeles.', cls: 'chico plano', on: () => tr ? trRapido(t => { t.ang += Math.PI / 2; }) : transformarSel('Rotar', PIX.rot90) }),
+      CK.btn({ ico: 'escalar', txt: tr ? 'Aplicar' : 'Transformar', cls: 'chico' + (tr ? ' pri' : ''), tecla: 'T', desc: 'Rotar a cualquier ángulo, escalar y estirar con manijas (o con números desde el clic derecho).', on: () => { if (tr) terminarTr(); else ponerHerr('transformar'); } }), tr ? CK.btn({ ico: 'ajustes', tip: 'Transformar con números', cls: 'chico plano', on: trNumeros }) : null, tr ? CK.btn({ ico: 'cerrar', tip: 'Cancelar transformación', tecla: 'Esc', cls: 'chico plano', on: cancelarTr }) : null,
       CK.btn({ ico: 'capas', txt: 'A capa nueva', desc: 'Corta lo seleccionado y lo pone en una capa nueva, en el mismo lugar. Sirve para separar las partes de un dibujo (una rama, un brazo, un objeto de una lámina) y trabajarlas por separado.', tecla: 'Ctrl + Mayús + J', cls: 'chico', on: () => selACapa(false) }), CK.btn({ ico: 'assets', txt: 'A asset nuevo', desc: 'Guarda lo seleccionado como un asset aparte, recortado justo. Así se separan varios objetos que vinieron juntos en una misma imagen.', cls: 'chico', on: () => aAssetNuevo(false) }), CK.btn({ ico: 'duplicar', tip: 'Copiar', tecla: 'Ctrl + C', cls: 'chico plano', on: () => copiar() }), CK.btn({ ico: 'basura', tip: 'Borrar lo seleccionado', tecla: 'Supr', cls: 'chico plano', on: borrarSel }), CK.btn({ ico: 'cerrar', tip: 'Soltar la selección', tecla: 'Esc', cls: 'chico plano', on: () => { soltarFlot(); sel = null; pintarTira(); pedir(); } })));
     const pal = () => CK.P.estilo.paleta;
     tira.append(h('div.tira',
@@ -359,29 +474,31 @@
     tabs = CK.pestanas([{ id: 'color', txt: 'Color', ico: 'estilo', desc: 'Rueda de color, paleta del proyecto y colores de la imagen.', pintar: c => { if (A()) pColor(c); } }, { id: 'capas', txt: 'Capas', ico: 'capas', desc: 'Capas del dibujo con opacidad.', pintar: c => { if (A()) pCapas(c); } }, { id: 'vista', txt: 'Vista', ico: 'ojo', desc: 'El asset a tamaño real y su animación.', pintar: c => { if (A()) pVista(c); } }], 'color', { despegable: true, apilable: true, id: 'pixel', nombre: 'Pixel art' });
     panel.append(tabs);
     CK.soltarEn(tablero, async fs => { const as = await CK.importarImagenes('sprite', fs); if (as.length) abrir(as[0].id); });
+    lienzo.addEventListener('contextmenu', e => { if (!A() || !['selRect', 'lazo', 'varita', 'mover', 'transformar'].includes(S.herr)) return; menuLienzo(e); });
     CK.on('estilo', () => { if (CK.seccion_actual === 'pixel' && tabs.visible('color')) tabs.refrescar(); });
   };
-  const ponerHerr = id => { if (flot && !['mover', 'selRect', 'lazo', 'varita'].includes(id)) soltarFlot(); S.herr = id; herrCol.elegir(id); const t = HERR.find(x => x.id === id); document.getElementById('estado-herr').textContent = 'Pixel art · ' + t.tip; CK.estado(t.est); pedir(); };
+  const ponerHerr = id => { if (tr && id !== 'transformar') terminarTr(); if (flot && !['mover', 'selRect', 'lazo', 'varita', 'transformar'].includes(id)) soltarFlot(); if (id === 'transformar' && A() && !tr) setTimeout(empezarTr, 0); S.herr = id; herrCol.elegir(id); const t = HERR.find(x => x.id === id); document.getElementById('estado-herr').textContent = 'Pixel art · ' + t.tip; CK.estado(t.est); pedir(); };
   const mostrar = arg => {
     if (!CK.P) return; if (arg && CK.P.assets[arg]) abrir(arg); else if (S.id && CK.P.assets[S.id]) { if (!doc || CK.img[S.id] !== (doc.capas.length === 1 ? doc.capas[0].c : CK.img[S.id])) abrir(S.id); } else if (CK.P.ui.pixel && CK.P.assets[CK.P.ui.pixel]) abrir(CK.P.ui.pixel); else { S.id = null; doc = null; }
     pintarTodo(); vista.medir();
   };
   const tecla = (e, k, ctrl) => {
     if (!A()) return false;
-    if (ctrl) { if (k === 'j' && e.shiftKey) { selACapa(false); return true; } if (k === 'c') { copiar(); return true; } if (k === 'x') { copiar(true); return true; } if (k === 'v') { pegar(); return true; } if (k === 'a') { soltarFlot(); const f = FR(); ponerSel(new Uint8Array(f.w * f.h).fill(1)); return true; } if (k === 'd') { soltarFlot(); sel = null; pintarTira(); pedir(); return true; } return false; }
-    if (k === 'escape') { soltarFlot(); sel = null; trazo = null; pintarTira(); pedir(); return true; }
-    if (k === 'enter') { soltarFlot(); return true; }
+    if (ctrl) { if (k === 't') { ponerHerr('transformar'); return true; } if (k === 'j' && e.shiftKey) { selACapa(false); return true; } if (k === 'c') { copiar(); return true; } if (k === 'x') { copiar(true); return true; } if (k === 'v') { pegar(); return true; } if (k === 'a') { soltarFlot(); const f = FR(); ponerSel(new Uint8Array(f.w * f.h).fill(1)); return true; } if (k === 'd') { soltarFlot(); sel = null; pintarTira(); pedir(); return true; } return false; }
+    if (k === 'escape') { if (tr) { cancelarTr(); return true; } soltarFlot(); sel = null; trazo = null; pintarTira(); pedir(); return true; }
+    if (k === 'enter') { if (tr) { terminarTr(); return true; } soltarFlot(); return true; }
     if (k === 'delete' || k === 'backspace') { borrarSel(); return true; }
     if (k === 'x') { [S.c1, S.c2] = [S.c2, S.c1]; pintarColor(); return true; }
     if (k === '[' || k === ']') { S.tam = CK.clamp(S.tam + (k === ']' ? 1 : -1), 1, 24); pintarTira(); return true; }
     if (k === ',' || k === '.') { irCuadro(doc.cuadro + (k === '.' ? 1 : -1)); return true; }
     if (k === '0') { const f = FR(); vista.encuadrar(f.w, f.h, 40); return true; } if (k === '+' || k === '=') { vista.zoomEn(1); return true; } if (k === '-') { vista.zoomEn(-1); return true; }
+    if (k.startsWith('arrow') && tr) { const d = e.shiftKey ? 8 : 1; tr.cx += k === 'arrowleft' ? -d : k === 'arrowright' ? d : 0; tr.cy += k === 'arrowup' ? -d : k === 'arrowdown' ? d : 0; aplicarTr(); return true; }
     if (k.startsWith('arrow') && (sel || flot)) { levantar(); const d = e.shiftKey ? 8 : 1; flot.x += k === 'arrowleft' ? -d : k === 'arrowright' ? d : 0; flot.y += k === 'arrowup' ? -d : k === 'arrowdown' ? d : 0; pedir(); return true; }
     const t = HERR.find(x => x.tecla && x.tecla.toLowerCase() === k); if (t) { ponerHerr(t.id); return true; }
     return false;
   };
-  CK.pixel = { abrir, S, doc: () => doc, soltar: soltarFlot, vista: () => vista };
+  CK.pixel = { abrir, S, doc: () => doc, soltar: soltarFlot, vista: () => vista, irCuadro: i => { if (doc) irCuadro(i); } };
   CK.on('antes-guardar', () => { if (doc && flot) soltarFlot(); });
   CK.on('asset-img', id => { if (doc && id === S.id && CK.seccion_actual !== 'pixel') { doc = null; } });
-  CK.registrar({ id: 'pixel', nombre: 'Pixel art', ico: 'pixel', desc: 'Dibujo y retoque a mano, píxel a píxel, con la paleta del proyecto.', crear, mostrar, tecla, ocultar: () => { soltarFlot(); clearInterval(vigia); }, alCambiarProyecto: () => { S.id = null; doc = null; sel = null; flot = null; } });
+  CK.registrar({ id: 'pixel', nombre: 'Pixel art', ico: 'pixel', desc: 'Dibujo y retoque a mano, píxel a píxel, con la paleta del proyecto.', crear, mostrar, tecla, ocultar: () => { soltarFlot(); clearInterval(vigia); }, alCambiarProyecto: () => { S.id = null; doc = null; sel = null; flot = null; tr = null; } });
 })();
