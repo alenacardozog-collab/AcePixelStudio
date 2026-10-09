@@ -30,7 +30,7 @@ No requiere instalación de librerías ni compiladores. Funciona de manera nativ
 | **🔄 Convertir** | Transforma imágenes de referencia o bocetos en assets pixel art limpios: remueve fondos, escala al tamaño del grid, ajusta a la paleta activa y agrega contornos. |
 | **🧱 Texturas** | Generador de tiles repetibles a partir de referencias de texturas y cálculo de las 16 piezas de autotile para bordes de terreno. |
 | **✏️ Pixel Art** | Editor manual de dibujo con lápiz, formas, selecciones, capas, papel cebolla, rueda cromática y sombreado tonal. |
-| **🎬 Animar** | Generador procedimental de animaciones (flotar, ondear, balanceo, titilar, agua), alineador de spritesheets y exportador a PNG, JSON y GIF. Pestaña de personajes con 4 direcciones. |
+| **🎬 Animar** | Generador procedimental de animaciones (flotar, ondear, balanceo, titilar, agua), alineador de spritesheets y exportador a PNG, JSON y GIF. Pestaña de personajes con 4 direcciones y pestaña **Juego** para traer animaciones del juego, retocarlas cuadro a cuadro y devolverlas (con respaldo). |
 | **✨ FX** | Sistema de partículas, destellos, sacudidas y luces con línea de tiempo multicapa. Exportación de datos o spritesheets pre-renderizadas. |
 | **💬 NPC** | Fichas de personajes con ramas de conversación basadas en palabras clave y respuestas con rol. Incluye simulador de charla. |
 | **📜 Misiones** | Sistema de misiones por objetivos (hablar con NPC, investigar zona, derrotar enemigos) con recompensas y banderas (*flags*). |

@@ -26,3 +26,8 @@ ehthumbs.db
 trabajo/**/respaldo/
 trabajo/**/versiones/
 trabajo/_respaldo_juego/
+trabajo/_*/
+
+# Pruebas locales
+_juego
+_lista_juego.txt

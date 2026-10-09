@@ -8,8 +8,13 @@
    No cambia nada del juego original: si se quita su <script> de index.html, todo vuelve a ser como antes.
    Este archivo lo escribe el editor; no hace falta editarlo a mano. */
 (function () {
-  const D = window.EDITOR_DATA, A = window.EDITOR_ASSETS || {};
-  if (!D || !D.mapas || typeof MainGameScene === 'undefined') return;
+  if (typeof MainGameScene === 'undefined') return;
+  const D = (window.EDITOR_DATA && window.EDITOR_DATA.mapas) ? window.EDITOR_DATA : { mapas: {} }, A = window.EDITOR_ASSETS || {};
+  // Personajes de prueba en la aldea: archivo aparte y opcional. Si no existe, no pasa nada; borrarlo los saca del juego.
+  try { document.write('<script src="js/maps/data/editor_prueba.js?v=' + Date.now().toString(36) + '"><\/script>'); } catch (e) { }
+  // Escenario del modo práctica (campo de entrenamiento): archivo aparte y opcional.
+  try { document.write('<script src="js/maps/data/editor_practica.js?v=' + Date.now().toString(36) + '"><\/script>'); } catch (e) { }
+  const PR = () => window.EDITOR_PRUEBA || { imagenes: {}, paseantes: [] };
   const P = MainGameScene.prototype, Q = new URLSearchParams(location.search);
   const ED = window.CK_EDITOR = { datos: D, indice: {}, npcs: {}, enemigos: {}, fxPts: {}, vivos: [], chat: null, salto: null };
   const propios = Object.keys(D.mapas).filter(id => !D.mapas[id].origen);
@@ -21,6 +26,12 @@
   const preload0 = P.preload;
   P.preload = function () {
     preload0.apply(this, arguments);
+    const PRA = window.EDITOR_PRACTICA;
+    if (PRA) {
+      Object.keys(PRA.imagenes || {}).forEach(key => { const im = PRA.imagenes[key]; if (this.textures.exists(key)) return; if (im.fw) this.load.spritesheet(key, im.datos, { frameWidth: im.fw, frameHeight: im.fh }); else this.load.image(key, im.datos); });
+      Object.keys(PRA.tilesets || {}).forEach(k => { if (!this.textures.exists('pr_ts_' + k)) this.load.image('pr_ts_' + k, PRA.tilesets[k]); });
+    }
+    Object.keys(PR().imagenes || {}).forEach(key => { const im = PR().imagenes[key]; if (!this.textures.exists(key)) this.load.spritesheet(key, im.datos, { frameWidth: im.fw, frameHeight: im.fh }); });
     Object.keys(A).forEach(key => { const meta = (D.assets || {})[key]; if (this.textures.exists(key)) return; if (meta && meta.cuadros) this.load.spritesheet(key, A[key], { frameWidth: meta.cuadros.fw, frameHeight: meta.cuadros.fh }); else this.load.image(key, A[key]); });
   };
   const create0 = P.create;
@@ -31,6 +42,18 @@
       // texturas que un mapa con prefijo propio (las ruinas usan 'ru_') necesita ver con ese prefijo
       (D.alias || []).concat(Object.keys(A)).forEach(k => { const dst = 'ru_' + k; if (!this.textures.exists(k) || this.textures.exists(dst)) return; const t = this.textures.get(k), src = t.getSourceImage(), c = (D.assets[k] || {}).cuadros; if (c) { this.textures.addSpriteSheet(dst, src, { frameWidth: c.fw, frameHeight: c.fh }); } else if (t.frameTotal > 2) { const f = t.get(0); this.textures.addSpriteSheet(dst, src, { frameWidth: f.width, frameHeight: f.height }); } else this.textures.addImage(dst, src); });
     } catch (e) { console.warn('[Taller] animaciones:', e); }
+    // paseantes de prueba: caminan de punto en punto por la aldea
+    try {
+      // cada paseante puede traer 'anims' con 4 direcciones (anda_/quieto_ + sur, norte, este; el oeste es el este espejado)
+      const animDe = key => { const im = PR().imagenes[key] || {}; if (!this.textures.exists(key)) return null; if (!this.anims.exists(key)) this.anims.create({ key, frames: [...Array(this.textures.get(key).frameTotal - 1).keys()].map(i => ({ key, frame: i })), frameRate: im.fps || 9, repeat: -1 }); return key; };
+      ED.paseantes = (PR().paseantes || []).filter(p => this.textures.exists(p.sprite)).map(p => {
+        const im = PR().imagenes[p.sprite] || {}, n = this.textures.get(p.sprite).frameTotal - 1;
+        if (!this.anims.exists(p.sprite + '_anda')) this.anims.create({ key: p.sprite + '_anda', frames: [...Array(n).keys()].map(i => ({ key: p.sprite, frame: i })), frameRate: im.fps || 9, repeat: -1 });
+        const an = {}; Object.keys(p.anims || {}).forEach(k => { const a = animDe(p.anims[k]); if (a) an[k] = a; });
+        const sp = this.add.sprite(p.ruta[0][0], p.ruta[0][1], p.sprite).setOrigin(0.5, 1).setScale(p.escala || 1).setDepth(p.ruta[0][1]); sp.play(an.anda_sur || p.sprite + '_anda');
+        return { sp, p, an, dir: 'sur', i: 1 % p.ruta.length, espera: 0 };
+      });
+    } catch (e) { console.warn('[Taller] paseantes:', e); }
     return r;
   };
 
@@ -182,6 +205,15 @@
   const story0 = P.updateStory;
   P.updateStory = function (dt) {
     story0.apply(this, arguments);
+    try { (ED.paseantes || []).forEach(w => { const sp = w.sp, t = w.p.ruta[w.i], dx = t[0] - sp.x, dy = t[1] - sp.y, d = Math.hypot(dx, dy), now = this.time.now, an = w.an || {};
+      const poner = k => { if (an[k]) { if (sp.anims.getName() !== an[k]) sp.play(an[k]); if (sp.anims.isPaused) sp.anims.resume(); return true; } return false; };
+      if (now < w.espera) { if (!poner('quieto_' + w.dir) && sp.anims.isPlaying) sp.anims.pause(); return; }
+      if (d < 1.5) { w.i = (w.i + 1) % w.p.ruta.length; w.espera = now + (w.p.pausa === undefined ? 900 : w.p.pausa); return; }
+      w.dir = Math.abs(dx) >= Math.abs(dy) ? 'este' : (dy > 0 ? 'sur' : 'norte');
+      if (!poner('anda_' + w.dir)) { if (sp.anims.getName() !== w.p.sprite + '_anda') sp.play(w.p.sprite + '_anda'); if (sp.anims.isPaused) sp.anims.resume(); }
+      const v = (w.p.vel || 22) * Math.min(100, dt) / 1000; sp.x += dx / d * Math.min(v, d); sp.y += dy / d * Math.min(v, d);
+      if (w.dir === 'este' || !an.anda_sur) { if (Math.abs(dx) > 0.5) sp.setFlipX(dx < 0); } else sp.setFlipX(false);
+      sp.setDepth(Math.round(sp.y)); }); } catch (e) { }
     if (this._gameMode !== 'campaign' || !this.story) return;
     try { cadaCuadro(this, dt); } catch (e) { if (!ED._avisado) { ED._avisado = true; console.warn('[Taller]', e); } }
   };
@@ -231,4 +263,69 @@
     if (el.classList.toggle('on')) { el.innerHTML = '<b>Mapas del Taller</b>'; propios.forEach(id => { const d = document.createElement('div'); d.textContent = D.mapas[id].nombre; d.onclick = () => { el.classList.remove('on'); s.ckEntrar(id); }; el.appendChild(d); }); }
   });
   console.log('[Taller] cargador activo: ' + propios.length + ' mapa(s), ' + Object.keys(D.npcs || {}).length + ' NPC, ' + Object.keys(D.fx || {}).length + ' efecto(s), ' + (D.misiones || []).length + ' misión(es). F7: ir a un mapa.');
+  // ------------------------------------------------------------------ 9. escenario del modo práctica
+  // Campo de entrenamiento armado con assets del Taller (js/maps/data/editor_practica.js). Sin ese archivo, la práctica queda como siempre.
+  const PRAC = {
+    partes: [], obst: [], casa: null,
+    limpiar(s) { this.partes.forEach(o => { try { o.destroy(); } catch (e) { } }); this.partes = []; this.casa = null; if (s && s.meadowTileSprite) s.meadowTileSprite.setVisible(true); if (s && s.groundGfx) s.groundGfx.setVisible(true); },
+    suelo(s, D) {
+      const key = 'pr_suelo';
+      if (!s.textures.exists(key)) {
+        const T = D.tile, N = D.n, c = document.createElement('canvas'); c.width = T * N; c.height = T * N; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+        const tp = s.textures.get('pr_ts_pasto').getSourceImage(), tc = s.textures.get('pr_ts_camino').getSourceImage(), cp = Math.floor(tp.width / T), cc = Math.floor(tc.width / T);
+        for (let i = 0; i < N * N; i++) {
+          const dx = (i % N) * T, dy = Math.floor(i / N) * T, g = D.pasto[i], r = D.camino[i];
+          x.drawImage(tp, (g % cp) * T, Math.floor(g / cp) * T, T, T, dx, dy, T, T);
+          if (r >= 0) x.drawImage(tc, (r % cc) * T, Math.floor(r / cc) * T, T, T, dx, dy, T, T);
+        }
+        s.textures.addCanvas(key, c);
+      }
+      this.partes.push(s.add.image(0, 0, key).setOrigin(0, 0).setDepth(-95));
+    },
+    armar(s) {
+      const D = window.EDITOR_PRACTICA; if (!D || s._gameMode === 'campaign') return;
+      if (!s.textures.exists('pr_ts_pasto')) return console.warn('[Taller] práctica: faltan las texturas del suelo');
+      this.limpiar(s);
+      if (s.meadowTileSprite) s.meadowTileSprite.setVisible(false); if (s.groundGfx) s.groundGfx.setVisible(false);
+      this.suelo(s, D);
+      const E = D.escala || 1, obst = [];
+      const anim = (key, fps, repeat) => { if (!s.anims.exists(key)) s.anims.create({ key, frames: s.anims.generateFrameNumbers(key), frameRate: fps, repeat }); return key; };
+      (D.objetos || []).forEach(o => {
+        if (!s.textures.exists(o.img)) return;
+        this.partes.push(s.add.image(o.x, o.y, o.img).setOrigin(0.5, 1).setScale(E).setDepth(o.y));
+        if (o.solido) obst.push({ x: Math.round(o.x - o.solido[0] / 2), y: Math.round(o.y - o.solido[1]), w: o.solido[0], h: o.solido[1], type: 'solid', taller: true });
+      });
+      const C = D.casa;
+      if (C && s.textures.exists(C.img)) {
+        const x0 = C.x - C.w * E / 2, y0 = C.y - C.h * E;
+        this.partes.push(s.add.image(C.x, C.y, C.img).setOrigin(0.5, 1).setScale(E).setDepth(C.y));
+        const casa = { x0, y0 };
+        if (C.humo && s.textures.exists(C.humo.img)) { const im = D.imagenes[C.humo.img]; const h = s.add.sprite(x0 + C.humo.dx * E, y0 + C.humo.dy * E, C.humo.img).setOrigin(0, 0).setScale(E).setDepth(C.y + 0.2); h.play(anim(C.humo.img, im.fps || 8, -1)); this.partes.push(h); }
+        if (C.puerta && s.textures.exists(C.puerta.img)) {
+          const im = D.imagenes[C.puerta.img], key = anim(C.puerta.img, im.fps || 12, 0);
+          if (!s.anims.exists(key + '_cierra')) s.anims.create({ key: key + '_cierra', frames: s.anims.generateFrameNumbers(C.puerta.img).reverse(), frameRate: im.fps || 12, repeat: 0 });
+          const p = s.add.sprite(x0 + C.puerta.dx * E, y0 + C.puerta.dy * E, C.puerta.img, 0).setOrigin(0, 0).setScale(E).setDepth(C.y + 0.1);
+          this.partes.push(p); casa.puerta = { sp: p, key, ux: x0 + C.puerta.umbral[0] * E, uy: y0 + C.puerta.umbral[1] * E, r: C.puerta.radio || 34, abierta: false };
+        }
+        (C.solido || []).forEach(r => obst.push({ x: Math.round(x0 + r[0] * E), y: Math.round(y0 + r[1] * E), w: Math.round(r[2] * E), h: Math.round(r[3] * E), type: 'solid', taller: true }));
+        this.casa = casa;
+      }
+      s.mapObstacles = (s.mapObstacles || []).filter(o => !o.taller).concat(obst);
+      try { s.rebuildObstacleColliders(); } catch (e) { console.warn('[Taller] práctica: colisiones', e); }
+      if (D.zoom) s.cameras.main.setZoom(D.zoom);
+    },
+    cuadro(s) {
+      const c = this.casa; if (!c || !c.puerta || !s.player) return; const p = c.puerta;
+      const cerca = Math.hypot(s.player.x - p.ux, s.player.y - p.uy) < p.r;
+      if (cerca !== p.abierta) { p.abierta = cerca; p.sp.play(cerca ? p.key : p.key + '_cierra'); if (window.sfx && sfx.fx) { try { sfx.fx('door_open', 0.5); } catch (e) { } } }
+    }
+  };
+  ED.practica = PRAC;
+  const practica0 = P.startPractice;
+  if (practica0) P.startPractice = function () { const r = practica0.apply(this, arguments); try { PRAC.armar(this); } catch (e) { console.warn('[Taller] práctica:', e); } return r; };
+  const campana0 = P.startCampaign;
+  if (campana0) P.startCampaign = function () { try { PRAC.limpiar(null); this.mapObstacles = (this.mapObstacles || []).filter(o => !o.taller); } catch (e) { } return campana0.apply(this, arguments); };
+  const update0 = P.update;
+  P.update = function () { const r = update0.apply(this, arguments); try { if (this._gameMode !== 'campaign') PRAC.cuadro(this); const enAldea = this._gameMode === 'campaign' && !this.currentInterior; (ED.paseantes || []).forEach(w => { if (w.sp.visible !== enAldea) w.sp.setVisible(enAldea); }); } catch (e) { } return r; };
+
 })();

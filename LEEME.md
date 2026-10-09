@@ -27,7 +27,7 @@ El navegador vuelve a pedir permiso para las carpetas cada vez que abrís el edi
 | **Convertir** | Imagen de referencia → asset: quita el fondo, lo lleva al tamaño real, a la paleta, limpia y pone contorno. Una o muchas a la vez. |
 | **Texturas** | Referencia de piedra / madera / pasto → tile repetible, variantes y las 16 piezas de borde para pintar suelos. |
 | **Pixel art** | Dibujo y retoque a mano: lápiz, formas, selección, capas, cuadros con papel cebolla, rueda de color, paleta fija, sombreado por tonos. |
-| **Animar** | Genera movimiento desde un dibujo quieto (ondear, mecer, flotar, titilar, agua…), alinea hojas de sprites y exporta PNG + JSON + GIF. La pestaña **Personaje** junta las animaciones de un personaje en sus 4 direcciones y las prueba caminando. |
+| **Animar** | Genera movimiento desde un dibujo quieto (ondear, mecer, flotar, titilar, agua…), alinea hojas de sprites y exporta PNG + JSON + GIF. La pestaña **Personaje** junta las animaciones de un personaje en sus 4 direcciones y las prueba caminando. La pestaña **Juego** trae cualquier animación del juego para retocarla cuadro a cuadro en Pixel art y la devuelve: se reemplaza sola en el juego, con respaldo. |
 | **FX** | Partículas, luces, destellos y sacudidas por capas, con línea de tiempo. Se exportan como datos o "horneados" a hoja de sprites. |
 | **NPC** | Ficha de cada personaje y sus temas de conversación (palabras clave → respuestas en su rol), con prueba de charla. |
 | **Misiones** | Encargos por pasos (hablar, preguntar por un tema, llegar a un punto, vencer enemigos) con recompensa. Se encadenan con banderas. |
@@ -112,3 +112,12 @@ Para pedirle algo: escribilo en **Notas**, clavá una nota en el mapa (tecla N) 
 - La sección Interfaz cambia las imágenes de la interfaz, no su disposición: cada pieza conserva su tamaño y el ancho de sus bordes.
 - Los conjuntos de poses (Animar → Personaje) sirven para revisar y armar la hoja; cambiar al héroe del juego por uno nuevo todavía es un paso aparte.
 - "Editar en Aseprite" no abre el programa: muestra la ruta del PNG y, mientras tengas ese asset abierto, lo actualiza solo cuando guardás desde Aseprite.
+
+## Retocar una animación del juego
+
+1. Conectá la carpeta del juego (y la del editor, para que quede respaldo).
+2. **Animar → Juego → Leer del juego.** Aparecen todas las hojas de sprites del juego (héroes, orcos, NPC, fuego, puertas, la casa…). "Mostrar también imágenes sueltas" suma el resto de las imágenes.
+3. **Traer y editar** la copia al proyecto y la abre en **Pixel art**: abajo están sus cuadros; elegís uno, lo retocás y la animación se actualiza al instante (con papel cebolla para ver el anterior y el siguiente).
+4. **Devolver al juego** (en Pixel art, abajo a la derecha, o en Animar → Juego) reemplaza la imagen en el mismo archivo `.js` del juego y en su PNG si existe. El original queda en `trabajo/<proyecto>/respaldo/`.
+
+Si la hoja cambia de tamaño (cuadros agregados o quitados) el editor avisa antes: el juego corta los cuadros con el tamaño original.
