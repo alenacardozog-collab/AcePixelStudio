@@ -1,0 +1,3841 @@
+{
+ "formato": "ck-editor",
+ "version": 1,
+ "nombre": "asdasd",
+ "creado": 1791497971351,
+ "modificado": 1791586623276,
+ "juego": {
+  "url": "../prueba/index.html",
+  "carpetaAssets": "assets/editor",
+  "archivoDatos": "js/maps/data/editor_data.js"
+ },
+ "estilo": {
+  "tile": 16,
+  "personaje": [
+   100,
+   100
+  ],
+  "escalaVista": 3,
+  "perspectiva": "Top-down 3/4",
+  "luz": "arriba-izquierda",
+  "contorno": "color",
+  "colorContorno": "#1b1420",
+  "maxColores": 24,
+  "bloquearPaleta": false,
+  "notas": "",
+  "paleta": [
+   "#1b1420",
+   "#3b2a3a",
+   "#5a4630",
+   "#7d6846",
+   "#a08a5c",
+   "#c9b47a",
+   "#e9dfc4",
+   "#2f4a2c",
+   "#4c7a3a",
+   "#74a84a",
+   "#a6cf5e",
+   "#3a4a66",
+   "#5d7a9a",
+   "#8fb3c9",
+   "#7d2a30",
+   "#b8483c",
+   "#e0803c",
+   "#f2c14e",
+   "#6b6258",
+   "#93897a",
+   "#bdb4a3",
+   "#f5f1e6"
+  ]
+ },
+ "assets": {
+  "baker_walking_cycle_sprite_sheet_2k_20261008191740": {
+   "id": "baker_walking_cycle_sprite_sheet_2k_20261008191740",
+   "nombre": "Baker_walking_cycle_sprite_sheet_2K_20261008191740",
+   "tipo": "ref",
+   "w": 2752,
+   "h": 1536,
+   "etiquetas": [],
+   "origen": "importado: Baker_walking_cycle_sprite_sheet_2K_20261008191740.jpg",
+   "creado": 1791497990410
+  },
+  "baker_walking_cycle_sprite_sheet_2k_20261008191740_2": {
+   "id": "baker_walking_cycle_sprite_sheet_2k_20261008191740_2",
+   "nombre": "Baker_walking_cycle_sprite_sheet_2K_20261008191740",
+   "tipo": "hoja",
+   "w": 17888,
+   "h": 1272,
+   "etiquetas": [],
+   "origen": "convertido de Baker_walking_cycle_sprite_sheet_2K_20261008191740",
+   "creado": 1791498077950,
+   "modificado": 1791578613918,
+   "cuadros": {
+    "fw": 2236,
+    "fh": 1272,
+    "fps": 8,
+    "bucle": true
+   },
+   "fxPrueba": [
+    {
+     "tipo": "fx",
+     "id": "tajo_de_espada",
+     "x": 1118,
+     "y": 763,
+     "escala": 1,
+     "detras": false,
+     "desde": 0,
+     "repetir": true
+    }
+   ]
+  },
+  "baker_walking_cycle_sprite_sheet_2k_20261008191740_agua": {
+   "id": "baker_walking_cycle_sprite_sheet_2k_20261008191740_agua",
+   "nombre": "Baker_walking_cycle_sprite_sheet_2K_20261008191740_agua",
+   "tipo": "hoja",
+   "w": 13416,
+   "h": 1272,
+   "etiquetas": [],
+   "origen": "animación \"Agua\" de Baker_walking_cycle_sprite_sheet_2K_20261008191740",
+   "creado": 1791574418563,
+   "cuadros": {
+    "fw": 2236,
+    "fh": 1272,
+    "fps": 8,
+    "bucle": true,
+    "oy": 0
+   },
+   "base": "baker_walking_cycle_sprite_sheet_2k_20261008191740_2",
+   "receta": {
+    "tipo": "agua",
+    "params": {}
+   },
+   "fxPrueba": []
+  },
+  "ui_bar_track": {
+   "id": "ui_bar_track",
+   "nombre": "ui_bar_track",
+   "tipo": "ui",
+   "w": 61,
+   "h": 12,
+   "etiquetas": [
+    "interfaz"
+   ],
+   "origen": "juego: assets/UI/theme/bar_track.png",
+   "creado": 1791582901009,
+   "rutaJuego": "assets/UI/theme/bar_track.png"
+  },
+  "ui_crown_gold": {
+   "id": "ui_crown_gold",
+   "nombre": "ui_crown_gold",
+   "tipo": "ui",
+   "w": 22,
+   "h": 16,
+   "etiquetas": [
+    "interfaz"
+   ],
+   "origen": "juego: assets/UI/theme/crown_gold.png",
+   "creado": 1791582901011,
+   "rutaJuego": "assets/UI/theme/crown_gold.png"
+  },
+  "ui_panel_dark": {
+   "id": "ui_panel_dark",
+   "nombre": "ui_panel_dark",
+   "tipo": "ui",
+   "w": 97,
+   "h": 96,
+   "etiquetas": [
+    "interfaz"
+   ],
+   "origen": "juego: assets/UI/theme/panel_dark.png",
+   "creado": 1791582901013,
+   "rutaJuego": "assets/UI/theme/panel_dark.png",
+   "modificado": 1791583571485
+  },
+  "ui_frame": {
+   "id": "ui_frame",
+   "nombre": "ui_frame",
+   "tipo": "ui",
+   "w": 112,
+   "h": 78,
+   "etiquetas": [
+    "interfaz"
+   ],
+   "origen": "juego: assets/UI/theme/frame.png",
+   "creado": 1791582901014,
+   "rutaJuego": "assets/UI/theme/frame.png",
+   "modificado": 1791583573643
+  },
+  "ui_pill_dark": {
+   "id": "ui_pill_dark",
+   "nombre": "ui_pill_dark",
+   "tipo": "ui",
+   "w": 64,
+   "h": 16,
+   "etiquetas": [
+    "interfaz"
+   ],
+   "origen": "juego: assets/UI/theme/pill_dark.png",
+   "creado": 1791582901016,
+   "rutaJuego": "assets/UI/theme/pill_dark.png"
+  },
+  "ui_parchment": {
+   "id": "ui_parchment",
+   "nombre": "ui_parchment",
+   "tipo": "ui",
+   "w": 144,
+   "h": 94,
+   "etiquetas": [
+    "interfaz"
+   ],
+   "origen": "juego: assets/UI/theme/parchment.png",
+   "creado": 1791582901018,
+   "rutaJuego": "assets/UI/theme/parchment.png",
+   "modificado": 1791583572569
+  },
+  "ui_plank": {
+   "id": "ui_plank",
+   "nombre": "ui_plank",
+   "tipo": "ui",
+   "w": 118,
+   "h": 32,
+   "etiquetas": [
+    "interfaz"
+   ],
+   "origen": "juego: assets/UI/theme/plank.png",
+   "creado": 1791582901021,
+   "rutaJuego": "assets/UI/theme/plank.png",
+   "modificado": 1791583574300
+  },
+  "ui_plank_dark": {
+   "id": "ui_plank_dark",
+   "nombre": "ui_plank_dark",
+   "tipo": "ui",
+   "w": 118,
+   "h": 32,
+   "etiquetas": [
+    "interfaz"
+   ],
+   "origen": "juego: assets/UI/theme/plank_dark.png",
+   "creado": 1791582901023,
+   "rutaJuego": "assets/UI/theme/plank_dark.png",
+   "modificado": 1791583574895
+  },
+  "ui_plank_red": {
+   "id": "ui_plank_red",
+   "nombre": "ui_plank_red",
+   "tipo": "ui",
+   "w": 118,
+   "h": 32,
+   "etiquetas": [
+    "interfaz"
+   ],
+   "origen": "juego: assets/UI/theme/plank_red.png",
+   "creado": 1791582901025,
+   "rutaJuego": "assets/UI/theme/plank_red.png",
+   "modificado": 1791583575496
+  },
+  "ui_panel_brown": {
+   "id": "ui_panel_brown",
+   "nombre": "ui_panel_brown",
+   "tipo": "ui",
+   "w": 97,
+   "h": 96,
+   "etiquetas": [
+    "interfaz"
+   ],
+   "origen": "juego: assets/UI/theme/panel_brown.png",
+   "creado": 1791582901056,
+   "rutaJuego": "assets/UI/theme/panel_brown.png",
+   "modificado": 1791584094183
+  },
+  "ui_plate": {
+   "id": "ui_plate",
+   "nombre": "ui_plate",
+   "tipo": "ui",
+   "w": 95,
+   "h": 36,
+   "etiquetas": [
+    "interfaz"
+   ],
+   "origen": "juego: assets/UI/theme/plate.png",
+   "creado": 1791582901058,
+   "rutaJuego": "assets/UI/theme/plate.png",
+   "modificado": 1791583576105
+  },
+  "ui_plank_gold": {
+   "id": "ui_plank_gold",
+   "nombre": "ui_plank_gold",
+   "tipo": "ui",
+   "w": 118,
+   "h": 32,
+   "etiquetas": [
+    "interfaz"
+   ],
+   "origen": "juego: assets/UI/theme/plank_gold.png",
+   "creado": 1791582901060,
+   "rutaJuego": "assets/UI/theme/plank_gold.png",
+   "modificado": 1791583576712
+  },
+  "ui_panel_brown__capa_c1": {
+   "id": "ui_panel_brown__capa_c1",
+   "nombre": "ui_panel_brown / Capa 1",
+   "tipo": "capa",
+   "w": 97,
+   "h": 96,
+   "de": "ui_panel_brown"
+  },
+  "ui_panel_brown__capa_cmv1i9yuz": {
+   "id": "ui_panel_brown__capa_cmv1i9yuz",
+   "nombre": "ui_panel_brown / Capa 2",
+   "tipo": "capa",
+   "w": 97,
+   "h": 96,
+   "de": "ui_panel_brown"
+  },
+  "t_hay3": {
+   "id": "t_hay3",
+   "nombre": "t_hay3",
+   "tipo": "sprite",
+   "w": 56,
+   "h": 50,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_hay3.png",
+   "creado": 1791583397482,
+   "claveJuego": "cs_t_hay3",
+   "rutaJuego": "assets/castle/t_hay3.png",
+   "texJuego": "cs_t_hay3",
+   "animJuego": ""
+  },
+  "t_hay": {
+   "id": "t_hay",
+   "nombre": "t_hay",
+   "tipo": "sprite",
+   "w": 43,
+   "h": 32,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_hay.png",
+   "creado": 1791583397485,
+   "claveJuego": "cs_t_hay",
+   "rutaJuego": "assets/castle/t_hay.png",
+   "texJuego": "cs_t_hay",
+   "animJuego": ""
+  },
+  "t_crates": {
+   "id": "t_crates",
+   "nombre": "t_crates",
+   "tipo": "sprite",
+   "w": 22,
+   "h": 38,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_crates.png",
+   "creado": 1791583397497,
+   "claveJuego": "cs_t_crates",
+   "rutaJuego": "assets/castle/t_crates.png",
+   "texJuego": "cs_t_crates",
+   "animJuego": ""
+  },
+  "t_barrel": {
+   "id": "t_barrel",
+   "nombre": "t_barrel",
+   "tipo": "sprite",
+   "w": 18,
+   "h": 26,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_barrel.png",
+   "creado": 1791583397501,
+   "claveJuego": "cs_t_barrel",
+   "rutaJuego": "assets/castle/t_barrel.png",
+   "texJuego": "cs_t_barrel",
+   "animJuego": ""
+  },
+  "t_tent": {
+   "id": "t_tent",
+   "nombre": "t_tent",
+   "tipo": "sprite",
+   "w": 76,
+   "h": 74,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_tent.png",
+   "creado": 1791583397504,
+   "claveJuego": "cs_t_tent",
+   "rutaJuego": "assets/castle/t_tent.png",
+   "texJuego": "cs_t_tent",
+   "animJuego": ""
+  },
+  "t_quintain": {
+   "id": "t_quintain",
+   "nombre": "t_quintain",
+   "tipo": "sprite",
+   "w": 17,
+   "h": 38,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_quintain.png",
+   "creado": 1791583397508,
+   "claveJuego": "cs_t_quintain",
+   "rutaJuego": "assets/castle/t_quintain.png",
+   "texJuego": "cs_t_quintain",
+   "animJuego": ""
+  },
+  "t_armor": {
+   "id": "t_armor",
+   "nombre": "t_armor",
+   "tipo": "sprite",
+   "w": 17,
+   "h": 34,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_armor.png",
+   "creado": 1791583397510,
+   "claveJuego": "cs_t_armor",
+   "rutaJuego": "assets/castle/t_armor.png",
+   "texJuego": "cs_t_armor",
+   "animJuego": ""
+  },
+  "t_swords": {
+   "id": "t_swords",
+   "nombre": "t_swords",
+   "tipo": "sprite",
+   "w": 70,
+   "h": 62,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_swords.png",
+   "creado": 1791583397513,
+   "claveJuego": "cs_t_swords",
+   "rutaJuego": "assets/castle/t_swords.png",
+   "texJuego": "cs_t_swords",
+   "animJuego": ""
+  },
+  "t_spears": {
+   "id": "t_spears",
+   "nombre": "t_spears",
+   "tipo": "sprite",
+   "w": 64,
+   "h": 62,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_spears.png",
+   "creado": 1791583397516,
+   "claveJuego": "cs_t_spears",
+   "rutaJuego": "assets/castle/t_spears.png",
+   "texJuego": "cs_t_spears",
+   "animJuego": ""
+  },
+  "t_dummy": {
+   "id": "t_dummy",
+   "nombre": "t_dummy",
+   "tipo": "sprite",
+   "w": 28,
+   "h": 34,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_dummy.png",
+   "creado": 1791583397524,
+   "claveJuego": "cs_t_dummy",
+   "rutaJuego": "assets/castle/t_dummy.png",
+   "texJuego": "cs_t_dummy",
+   "animJuego": "",
+   "modificado": 1791584354624
+  },
+  "t_bench_h": {
+   "id": "t_bench_h",
+   "nombre": "t_bench_h",
+   "tipo": "sprite",
+   "w": 60,
+   "h": 22,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_bench_h.png",
+   "creado": 1791583397527,
+   "claveJuego": "cs_t_bench_h",
+   "rutaJuego": "assets/castle/t_bench_h.png",
+   "texJuego": "cs_t_bench_h",
+   "animJuego": ""
+  },
+  "t_bench_v": {
+   "id": "t_bench_v",
+   "nombre": "t_bench_v",
+   "tipo": "sprite",
+   "w": 21,
+   "h": 62,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_bench_v.png",
+   "creado": 1791583397530,
+   "claveJuego": "cs_t_bench_v",
+   "rutaJuego": "assets/castle/t_bench_v.png",
+   "texJuego": "cs_t_bench_v",
+   "animJuego": ""
+  },
+  "t_log_h": {
+   "id": "t_log_h",
+   "nombre": "t_log_h",
+   "tipo": "sprite",
+   "w": 40,
+   "h": 14,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_log_h.png",
+   "creado": 1791583397533,
+   "claveJuego": "cs_t_log_h",
+   "rutaJuego": "assets/castle/t_log_h.png",
+   "texJuego": "cs_t_log_h",
+   "animJuego": ""
+  },
+  "t_log_d2": {
+   "id": "t_log_d2",
+   "nombre": "t_log_d2",
+   "tipo": "sprite",
+   "w": 34,
+   "h": 34,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_log_d2.png",
+   "creado": 1791583397536,
+   "claveJuego": "cs_t_log_d2",
+   "rutaJuego": "assets/castle/t_log_d2.png",
+   "texJuego": "cs_t_log_d2",
+   "animJuego": "",
+   "modificado": 1791583577310
+  },
+  "t_log_v": {
+   "id": "t_log_v",
+   "nombre": "t_log_v",
+   "tipo": "sprite",
+   "w": 13,
+   "h": 40,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_log_v.png",
+   "creado": 1791583397541,
+   "claveJuego": "cs_t_log_v",
+   "rutaJuego": "assets/castle/t_log_v.png",
+   "texJuego": "cs_t_log_v",
+   "animJuego": "",
+   "modificado": 1791583577907
+  },
+  "t_log_d1": {
+   "id": "t_log_d1",
+   "nombre": "t_log_d1",
+   "tipo": "sprite",
+   "w": 34,
+   "h": 34,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_log_d1.png",
+   "creado": 1791583397544,
+   "claveJuego": "cs_t_log_d1",
+   "rutaJuego": "assets/castle/t_log_d1.png",
+   "texJuego": "cs_t_log_d1",
+   "animJuego": "",
+   "modificado": 1791583578509
+  },
+  "t_tripod": {
+   "id": "t_tripod",
+   "nombre": "t_tripod",
+   "tipo": "sprite",
+   "w": 20,
+   "h": 47,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_tripod.png",
+   "creado": 1791583397547,
+   "claveJuego": "cs_t_tripod",
+   "rutaJuego": "assets/castle/t_tripod.png",
+   "texJuego": "cs_t_tripod",
+   "animJuego": ""
+  },
+  "t_arrowpost": {
+   "id": "t_arrowpost",
+   "nombre": "t_arrowpost",
+   "tipo": "sprite",
+   "w": 25,
+   "h": 50,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_arrowpost.png",
+   "creado": 1791583397551,
+   "claveJuego": "cs_t_arrowpost",
+   "rutaJuego": "assets/castle/t_arrowpost.png",
+   "texJuego": "cs_t_arrowpost",
+   "animJuego": ""
+  },
+  "t_bows": {
+   "id": "t_bows",
+   "nombre": "t_bows",
+   "tipo": "sprite",
+   "w": 47,
+   "h": 50,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_bows.png",
+   "creado": 1791583397554,
+   "claveJuego": "cs_t_bows",
+   "rutaJuego": "assets/castle/t_bows.png",
+   "texJuego": "cs_t_bows",
+   "animJuego": ""
+  },
+  "t_target": {
+   "id": "t_target",
+   "nombre": "t_target",
+   "tipo": "sprite",
+   "w": 23,
+   "h": 36,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_target.png",
+   "creado": 1791583397560,
+   "claveJuego": "cs_t_target",
+   "rutaJuego": "assets/castle/t_target.png",
+   "texJuego": "cs_t_target",
+   "animJuego": ""
+  },
+  "t_target2": {
+   "id": "t_target2",
+   "nombre": "t_target2",
+   "tipo": "sprite",
+   "w": 23,
+   "h": 36,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_target2.png",
+   "creado": 1791583397564,
+   "claveJuego": "cs_t_target2",
+   "rutaJuego": "assets/castle/t_target2.png",
+   "texJuego": "cs_t_target2",
+   "animJuego": ""
+  },
+  "t_bowrack": {
+   "id": "t_bowrack",
+   "nombre": "t_bowrack",
+   "tipo": "sprite",
+   "w": 12,
+   "h": 40,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_bowrack.png",
+   "creado": 1791583397567,
+   "claveJuego": "cs_t_bowrack",
+   "rutaJuego": "assets/castle/t_bowrack.png",
+   "texJuego": "cs_t_bowrack",
+   "animJuego": ""
+  },
+  "t_fence_h": {
+   "id": "t_fence_h",
+   "nombre": "t_fence_h",
+   "tipo": "sprite",
+   "w": 36,
+   "h": 22,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_fence_h.png",
+   "creado": 1791583397571,
+   "claveJuego": "cs_t_fence_h",
+   "rutaJuego": "assets/castle/t_fence_h.png",
+   "texJuego": "cs_t_fence_h",
+   "animJuego": ""
+  },
+  "t_fence_v": {
+   "id": "t_fence_v",
+   "nombre": "t_fence_v",
+   "tipo": "sprite",
+   "w": 9,
+   "h": 38,
+   "etiquetas": [
+    "training"
+   ],
+   "origen": "juego: assets/castle/t_fence_v.png",
+   "creado": 1791583397576,
+   "claveJuego": "cs_t_fence_v",
+   "rutaJuego": "assets/castle/t_fence_v.png",
+   "texJuego": "cs_t_fence_v",
+   "animJuego": ""
+  },
+  "convertido": {
+   "id": "convertido",
+   "nombre": "convertido",
+   "tipo": "ref",
+   "w": 407,
+   "h": 532,
+   "etiquetas": [],
+   "origen": "importado: convertido.png",
+   "creado": 1791584583504
+  },
+  "stone_wall_v0_63mmfjnritm81": {
+   "id": "stone_wall_v0_63mmfjnritm81",
+   "nombre": "stone-wall-v0-63mmfjnritm81",
+   "tipo": "ref",
+   "w": 470,
+   "h": 470,
+   "etiquetas": [],
+   "origen": "importado: stone-wall-v0-63mmfjnritm81.png",
+   "creado": 1791586317534
+  },
+  "stone_wall_v0_63mmfjnritm81_2": {
+   "id": "stone_wall_v0_63mmfjnritm81_2",
+   "nombre": "stone-wall-v0-63mmfjnritm81",
+   "tipo": "textura",
+   "w": 64,
+   "h": 64,
+   "etiquetas": [],
+   "origen": "textura de stone-wall-v0-63mmfjnritm81",
+   "creado": 1791586501754,
+   "tileset": {
+    "tile": 16,
+    "forma": "libre"
+   }
+  },
+  "ts_stone_wall_v0_63mmfjnritm81": {
+   "id": "ts_stone_wall_v0_63mmfjnritm81",
+   "nombre": "ts_stone-wall-v0-63mmfjnritm81",
+   "tipo": "tileset",
+   "w": 64,
+   "h": 80,
+   "etiquetas": [],
+   "origen": "transiciones de stone-wall-v0-63mmfjnritm81",
+   "creado": 1791586527633,
+   "tileset": {
+    "tile": 16,
+    "forma": "wang16",
+    "variantes": 4,
+    "terreno": "stone_wall_v0_63mmfjnritm81_2",
+    "base": null
+   }
+  }
+ },
+ "mapas": {
+  "mapa_nuevo": {
+   "id": "mapa_nuevo",
+   "nombre": "Mapa nuevo",
+   "w": 640,
+   "h": 480,
+   "tile": 16,
+   "fondo": "suelo_training",
+   "colorFondo": "#60aa50",
+   "capas": [
+    {
+     "id": "c_kdzclevtp",
+     "nombre": "Tiles",
+     "tipo": "tiles",
+     "visible": true,
+     "bloqueada": false,
+     "opacidad": 1,
+     "tileset": null,
+     "datos": ""
+    },
+    {
+     "id": "c_il40mwmjn",
+     "nombre": "Tiles",
+     "tipo": "tiles",
+     "visible": true,
+     "bloqueada": false,
+     "opacidad": 1,
+     "tileset": "stone_wall_v0_63mmfjnritm81_2",
+     "datos": "0x98,1x7,0x33,1x15,0x25,1x15,10,0x24,1x15,0x25,1x15,0x24,1x16,0x17,1x23,0x16,1x24,0x11,1x29,0x11,1x29,0x11,1x20,0,6x6,10x6,0x7,1x19,0x2,6x6,10x6,0x7,1x12,0x9,6x6,10x6,0x7,1x11,0x10,6x6,10x6,0x7,1x11,0x10,6x5,10x7,0x7,1x10,0x11,6x5,10x7,0x8,1x7,0x18,10x7,0x33,10x7,0x33,10x7,0x33,10x7,0x323"
+    },
+    {
+     "id": "c_igwzkc40i",
+     "nombre": "Objetos",
+     "tipo": "objetos",
+     "visible": true,
+     "bloqueada": false,
+     "opacidad": 1,
+     "orden": "y",
+     "objetos": [
+      {
+       "id": "o_iid72rml3",
+       "asset": "t_arrowpost",
+       "x": 67,
+       "y": 87,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "flipX": false,
+       "clave": "cs_t_arrowpost"
+      },
+      {
+       "id": "o_iin6a20ss",
+       "asset": "t_barrel",
+       "x": 124,
+       "y": 83,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "flipX": false,
+       "clave": "cs_t_barrel"
+      },
+      {
+       "id": "o_iiov625qc",
+       "asset": "t_barrel",
+       "x": 133,
+       "y": 96,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "flipX": false,
+       "clave": "cs_t_barrel"
+      },
+      {
+       "id": "o_iizzxryye",
+       "asset": "t_log_h",
+       "x": 232,
+       "y": 234,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "flipX": false,
+       "clave": "cs_t_log_h"
+      },
+      {
+       "id": "o_ij3yz3stl",
+       "asset": "t_log_d2",
+       "x": 271,
+       "y": 259,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "flipX": false,
+       "clave": "cs_t_log_d2"
+      },
+      {
+       "id": "o_ij8cerfmj",
+       "asset": "t_log_v",
+       "x": 282,
+       "y": 310,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "flipX": false,
+       "clave": "cs_t_log_v"
+      },
+      {
+       "id": "o_ija1yleau",
+       "asset": "t_log_h",
+       "x": 268,
+       "y": 335,
+       "sx": 1,
+       "sy": 1,
+       "rot": 315,
+       "flipX": false,
+       "clave": "cs_t_log_h"
+      },
+      {
+       "id": "o_ijh7d6etj",
+       "asset": "t_log_h",
+       "x": 227,
+       "y": 352,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "flipX": false,
+       "clave": "cs_t_log_h"
+      },
+      {
+       "id": "o_ijjp61sha",
+       "asset": "t_log_d2",
+       "x": 189,
+       "y": 343,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "flipX": false,
+       "clave": "cs_t_log_d2"
+      },
+      {
+       "id": "o_ijmlswi6o",
+       "asset": "t_log_v",
+       "x": 178,
+       "y": 300,
+       "sx": 1,
+       "sy": 1,
+       "rot": 90,
+       "flipX": false,
+       "clave": "cs_t_log_v",
+       "props": {},
+       "flipY": false,
+       "alpha": 1
+      },
+      {
+       "id": "o_inwzqfuj9",
+       "tipo": "punto",
+       "clase": "npc",
+       "nombre": "",
+       "x": 98,
+       "y": 371,
+       "props": {}
+      },
+      {
+       "id": "o_ioa0fjwzi",
+       "tipo": "luz",
+       "x": 260,
+       "y": 237,
+       "radio": 116,
+       "color": "#927f63",
+       "fuerza": 0.55,
+       "parpadeo": 0
+      },
+      {
+       "id": "o_irxu16vpv",
+       "asset": "t_tent",
+       "x": 254,
+       "y": 145,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "flipX": false,
+       "clave": "cs_t_tent",
+       "props": {}
+      },
+      {
+       "id": "o_itlj69jdh",
+       "tipo": "punto",
+       "clase": "efecto",
+       "nombre": "",
+       "x": 587,
+       "y": 149,
+       "props": {
+        "fx": "llama_suave"
+       }
+      },
+      {
+       "id": "o_j4hzyxcck",
+       "asset": "t_tent",
+       "x": 364,
+       "y": 185,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "flipX": false,
+       "clave": "cs_t_tent"
+      },
+      {
+       "id": "o_j4i98t4fm",
+       "asset": "t_tent",
+       "x": 422,
+       "y": 310,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "flipX": false,
+       "clave": "cs_t_tent",
+       "props": {},
+       "alpha": 1,
+       "col": {
+        "x": -37,
+        "y": -22,
+        "w": 74,
+        "h": 22
+       }
+      }
+     ],
+     "grupos": []
+    }
+   ],
+   "colisiones": [],
+   "notas": [],
+   "ambiente": {
+    "color": "#20264a",
+    "fuerza": 0
+   },
+   "entrada": {
+    "x": 1,
+    "y": 0,
+    "r": 14
+   },
+   "sonido": [],
+   "zonas": {
+    "celda": 8,
+    "w": 80,
+    "h": 60,
+    "datos": "4x1087,2x4,4x146,2,4x68,2x3,4x7,2x2,4x69,2x10,4x442,1,4x76,1x4,4x75,1x5,4x73,1x7,4x73,1x7,4x36,2x10,4x27,1x7,4x37,2x4,4x32,1x7,4x40,2x2,4x31,1x7,4x41,2,4x31,1x7,4x41,2x2,4x30,1x7,4x42,2x5,4x26,1x7,4x46,2x4,4x23,1x7,4x2080"
+   },
+   "titulo": "asdasd",
+   "superficie": "dirt"
+  },
+  "training": {
+   "id": "training",
+   "nombre": "Patio de armas",
+   "w": 832,
+   "h": 464,
+   "tile": 16,
+   "fondo": "suelo_training",
+   "colorFondo": "#3f6b35",
+   "capas": [
+    {
+     "id": "c_ihwwaum9h",
+     "nombre": "Objetos",
+     "tipo": "objetos",
+     "visible": true,
+     "bloqueada": false,
+     "opacidad": 1,
+     "orden": "y",
+     "objetos": [
+      {
+       "id": "o_ihwtnobtt",
+       "asset": "t_hay3",
+       "clave": "cs_t_hay3",
+       "x": 96,
+       "y": 136,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwtqckq4",
+       "asset": "t_hay",
+       "clave": "cs_t_hay",
+       "x": 75,
+       "y": 159,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwtqg53z",
+       "asset": "t_hay",
+       "clave": "cs_t_hay",
+       "x": 73,
+       "y": 318,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwtq6r9w",
+       "asset": "t_hay",
+       "clave": "cs_t_hay",
+       "x": 94,
+       "y": 445,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwu2gwo5",
+       "asset": "t_crates",
+       "clave": "cs_t_crates",
+       "x": 148,
+       "y": 135,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwu6p5z1",
+       "asset": "t_barrel",
+       "clave": "cs_t_barrel",
+       "x": 167,
+       "y": 135,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwu9k5w8",
+       "asset": "t_tent",
+       "clave": "cs_t_tent",
+       "x": 248,
+       "y": 159,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwu9tguy",
+       "asset": "t_tent",
+       "clave": "cs_t_tent",
+       "x": 325,
+       "y": 159,
+       "flipX": true,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwudke92",
+       "asset": "t_quintain",
+       "clave": "cs_t_quintain",
+       "x": 378,
+       "y": 151,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwufn3wa",
+       "asset": "t_armor",
+       "clave": "cs_t_armor",
+       "x": 473,
+       "y": 151,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwui7khf",
+       "asset": "t_swords",
+       "clave": "cs_t_swords",
+       "x": 524,
+       "y": 154,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwuio164",
+       "asset": "t_armor",
+       "clave": "cs_t_armor",
+       "x": 577,
+       "y": 151,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwulh02e",
+       "asset": "t_spears",
+       "clave": "cs_t_spears",
+       "x": 626,
+       "y": 154,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwul6ntu",
+       "asset": "t_armor",
+       "clave": "cs_t_armor",
+       "x": 676,
+       "y": 151,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwule3gv",
+       "asset": "t_crates",
+       "clave": "cs_t_crates",
+       "x": 700,
+       "y": 143,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwul2vtc",
+       "asset": "t_crates",
+       "clave": "cs_t_crates",
+       "x": 725,
+       "y": 136,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwulgnkp",
+       "asset": "t_barrel",
+       "clave": "cs_t_barrel",
+       "x": 748,
+       "y": 136,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwulop7i",
+       "asset": "t_barrel",
+       "clave": "cs_t_barrel",
+       "x": 769,
+       "y": 136,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwuljn0g",
+       "asset": "t_barrel",
+       "clave": "cs_t_barrel",
+       "x": 742,
+       "y": 161,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwulbrnx",
+       "asset": "t_barrel",
+       "clave": "cs_t_barrel",
+       "x": 770,
+       "y": 162,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwul0xcf",
+       "asset": "t_barrel",
+       "clave": "cs_t_barrel",
+       "x": 774,
+       "y": 218,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwulqryl",
+       "asset": "t_barrel",
+       "clave": "cs_t_barrel",
+       "x": 776,
+       "y": 439,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwull4o4",
+       "asset": "t_barrel",
+       "clave": "cs_t_barrel",
+       "x": 778,
+       "y": 460,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwul8xk3",
+       "asset": "t_barrel",
+       "clave": "cs_t_barrel",
+       "x": 757,
+       "y": 465,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwulag08",
+       "asset": "t_crates",
+       "clave": "cs_t_crates",
+       "x": 774,
+       "y": 193,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwutg4w6",
+       "asset": "t_dummy",
+       "clave": "cs_t_dummy",
+       "x": 89,
+       "y": 237,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwutr1yt",
+       "asset": "t_dummy",
+       "clave": "cs_t_dummy",
+       "x": 134,
+       "y": 218,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwut3rpe",
+       "asset": "t_dummy",
+       "clave": "cs_t_dummy",
+       "x": 176,
+       "y": 218,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwutmx4a",
+       "asset": "t_dummy",
+       "clave": "cs_t_dummy",
+       "x": 110,
+       "y": 289,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwutxse3",
+       "asset": "t_dummy",
+       "clave": "cs_t_dummy",
+       "x": 161,
+       "y": 286,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwutvmbe",
+       "asset": "t_dummy",
+       "clave": "cs_t_dummy",
+       "x": 106,
+       "y": 405,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwutej58",
+       "asset": "t_dummy",
+       "clave": "cs_t_dummy",
+       "x": 184,
+       "y": 400,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwuwkhzf",
+       "asset": "t_bench_h",
+       "clave": "cs_t_bench_h",
+       "x": 288,
+       "y": 193,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwuwr6rq",
+       "asset": "t_bench_h",
+       "clave": "cs_t_bench_h",
+       "x": 360,
+       "y": 193,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwuwsc4d",
+       "asset": "t_bench_h",
+       "clave": "cs_t_bench_h",
+       "x": 524,
+       "y": 192,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwuwxkxd",
+       "asset": "t_bench_h",
+       "clave": "cs_t_bench_h",
+       "x": 601,
+       "y": 192,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwuw1sdm",
+       "asset": "t_bench_h",
+       "clave": "cs_t_bench_h",
+       "x": 735,
+       "y": 452,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwuzkqkd",
+       "asset": "t_bench_v",
+       "clave": "cs_t_bench_v",
+       "x": 490,
+       "y": 302,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwuzamk9",
+       "asset": "t_bench_v",
+       "clave": "cs_t_bench_v",
+       "x": 490,
+       "y": 375,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwv26qrl",
+       "asset": "t_log_h",
+       "clave": "cs_t_log_h",
+       "x": 292,
+       "y": 221,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwv6u4di",
+       "asset": "t_log_d2",
+       "clave": "cs_t_log_d2",
+       "x": 327,
+       "y": 244,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvasem9",
+       "asset": "t_log_v",
+       "clave": "cs_t_log_v",
+       "x": 341,
+       "y": 278,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwve6cmt",
+       "asset": "t_log_d1",
+       "clave": "cs_t_log_d1",
+       "x": 327,
+       "y": 307,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwve2iar",
+       "asset": "t_log_h",
+       "clave": "cs_t_log_h",
+       "x": 292,
+       "y": 310,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwveixo6",
+       "asset": "t_log_d2",
+       "clave": "cs_t_log_d2",
+       "x": 258,
+       "y": 307,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwve48ua",
+       "asset": "t_log_v",
+       "clave": "cs_t_log_v",
+       "x": 244,
+       "y": 278,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvekh8r",
+       "asset": "t_log_d1",
+       "clave": "cs_t_log_d1",
+       "x": 258,
+       "y": 244,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwveqxgs",
+       "asset": "t_log_h",
+       "clave": "cs_t_log_h",
+       "x": 292,
+       "y": 334,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwveemn9",
+       "asset": "t_log_d2",
+       "clave": "cs_t_log_d2",
+       "x": 327,
+       "y": 357,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvexvgd",
+       "asset": "t_log_v",
+       "clave": "cs_t_log_v",
+       "x": 341,
+       "y": 392,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvepbct",
+       "asset": "t_log_d1",
+       "clave": "cs_t_log_d1",
+       "x": 327,
+       "y": 421,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwveuwzs",
+       "asset": "t_log_h",
+       "clave": "cs_t_log_h",
+       "x": 292,
+       "y": 424,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvez1gs",
+       "asset": "t_log_d2",
+       "clave": "cs_t_log_d2",
+       "x": 258,
+       "y": 421,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvezvtq",
+       "asset": "t_log_v",
+       "clave": "cs_t_log_v",
+       "x": 244,
+       "y": 392,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwve847i",
+       "asset": "t_log_d1",
+       "clave": "cs_t_log_d1",
+       "x": 258,
+       "y": 357,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvhh4l9",
+       "asset": "t_tripod",
+       "clave": "cs_t_tripod",
+       "x": 376,
+       "y": 335,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvh0jnp",
+       "asset": "t_tripod",
+       "clave": "cs_t_tripod",
+       "x": 376,
+       "y": 367,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvkguqf",
+       "asset": "t_arrowpost",
+       "clave": "cs_t_arrowpost",
+       "x": 579,
+       "y": 286,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvkeip5",
+       "asset": "t_arrowpost",
+       "clave": "cs_t_arrowpost",
+       "x": 579,
+       "y": 335,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvkngdf",
+       "asset": "t_arrowpost",
+       "clave": "cs_t_arrowpost",
+       "x": 579,
+       "y": 392,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvotrow",
+       "asset": "t_bows",
+       "clave": "cs_t_bows",
+       "x": 691,
+       "y": 229,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvod921",
+       "asset": "t_bows",
+       "clave": "cs_t_bows",
+       "x": 666,
+       "y": 452,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvux7w7",
+       "asset": "t_target",
+       "clave": "cs_t_target",
+       "x": 757,
+       "y": 257,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvxkd0j",
+       "asset": "t_target2",
+       "clave": "cs_t_target2",
+       "x": 757,
+       "y": 296,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvx6b82",
+       "asset": "t_target",
+       "clave": "cs_t_target",
+       "x": 757,
+       "y": 333,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvx1ot7",
+       "asset": "t_target2",
+       "clave": "cs_t_target2",
+       "x": 757,
+       "y": 370,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwvxki49",
+       "asset": "t_target",
+       "clave": "cs_t_target",
+       "x": 757,
+       "y": 408,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihww11vvj",
+       "asset": "t_bowrack",
+       "clave": "cs_t_bowrack",
+       "x": 782,
+       "y": 268,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihww19z3h",
+       "asset": "t_bowrack",
+       "clave": "cs_t_bowrack",
+       "x": 782,
+       "y": 317,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihww1ll51",
+       "asset": "t_bowrack",
+       "clave": "cs_t_bowrack",
+       "x": 782,
+       "y": 366,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihww5nk5h",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 80,
+       "y": 195,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihww5o6t7",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 108,
+       "y": 195,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihww5id92",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 136,
+       "y": 195,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihww55s03",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 164,
+       "y": 195,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihww5t39x",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 192,
+       "y": 195,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihww52a8w",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 220,
+       "y": 195,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwalwax",
+       "asset": "t_fence_v",
+       "clave": "cs_t_fence_v",
+       "x": 62,
+       "y": 218,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwazkx3",
+       "asset": "t_fence_v",
+       "clave": "cs_t_fence_v",
+       "x": 62,
+       "y": 248,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwaz0en",
+       "asset": "t_fence_v",
+       "clave": "cs_t_fence_v",
+       "x": 213,
+       "y": 213,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwa1g1l",
+       "asset": "t_fence_v",
+       "clave": "cs_t_fence_v",
+       "x": 213,
+       "y": 290,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwazeug",
+       "asset": "t_fence_v",
+       "clave": "cs_t_fence_v",
+       "x": 213,
+       "y": 320,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwax90g",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 80,
+       "y": 332,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwah2u3",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 108,
+       "y": 332,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwa2xuy",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 172,
+       "y": 332,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwakqw2",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 200,
+       "y": 332,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwaqyjb",
+       "asset": "t_fence_v",
+       "clave": "cs_t_fence_v",
+       "x": 62,
+       "y": 363,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwagi8c",
+       "asset": "t_fence_v",
+       "clave": "cs_t_fence_v",
+       "x": 62,
+       "y": 393,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwahq9h",
+       "asset": "t_fence_v",
+       "clave": "cs_t_fence_v",
+       "x": 62,
+       "y": 423,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwar34y",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 91,
+       "y": 460,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwaf6al",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 119,
+       "y": 460,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwasaci",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 147,
+       "y": 460,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwag6b4",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 189,
+       "y": 460,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwaecp8",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 217,
+       "y": 460,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwaiwmu",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 245,
+       "y": 460,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwa29y9",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 262,
+       "y": 460,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      },
+      {
+       "id": "o_ihwwa5juz",
+       "asset": "t_fence_h",
+       "clave": "cs_t_fence_h",
+       "x": 290,
+       "y": 460,
+       "flipX": false,
+       "sx": 1,
+       "sy": 1,
+       "rot": 0,
+       "anim": null
+      }
+     ],
+     "grupos": []
+    }
+   ],
+   "colisiones": [
+    {
+     "id": "k_ihwwa9fv3",
+     "x": 285,
+     "y": 0,
+     "w": 92,
+     "h": 120
+    },
+    {
+     "id": "k_ihwwaz7uk",
+     "x": 468,
+     "y": 0,
+     "w": 92,
+     "h": 120
+    },
+    {
+     "id": "k_ihwwa9h68",
+     "x": 3,
+     "y": 0,
+     "w": 112,
+     "h": 132
+    },
+    {
+     "id": "k_ihwwakkey",
+     "x": 717,
+     "y": 0,
+     "w": 112,
+     "h": 132
+    },
+    {
+     "id": "k_ihwwav71c",
+     "x": 306,
+     "y": 436,
+     "w": 69,
+     "h": 28
+    },
+    {
+     "id": "k_ihwwae9a3",
+     "x": 509,
+     "y": 436,
+     "w": 109,
+     "h": 28
+    },
+    {
+     "id": "k_ihwwa8se3",
+     "x": 71,
+     "y": 120,
+     "w": 50,
+     "h": 16
+    },
+    {
+     "id": "k_ihwwaiepw",
+     "x": 56,
+     "y": 149,
+     "w": 39,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwar90a",
+     "x": 54,
+     "y": 308,
+     "w": 39,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwa0tzd",
+     "x": 74,
+     "y": 435,
+     "w": 39,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwacfct",
+     "x": 138,
+     "y": 125,
+     "w": 20,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwamp64",
+     "x": 160,
+     "y": 127,
+     "w": 14,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwadpnz",
+     "x": 216,
+     "y": 125,
+     "w": 65,
+     "h": 34
+    },
+    {
+     "id": "k_ihwwa7hgt",
+     "x": 292,
+     "y": 125,
+     "w": 65,
+     "h": 34
+    },
+    {
+     "id": "k_ihwwaqkgv",
+     "x": 373,
+     "y": 143,
+     "w": 10,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwag3in",
+     "x": 466,
+     "y": 143,
+     "w": 14,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwakt0d",
+     "x": 492,
+     "y": 142,
+     "w": 64,
+     "h": 12
+    },
+    {
+     "id": "k_ihwwac4to",
+     "x": 570,
+     "y": 143,
+     "w": 14,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwao3d3",
+     "x": 596,
+     "y": 142,
+     "w": 59,
+     "h": 12
+    },
+    {
+     "id": "k_ihwwavc03",
+     "x": 669,
+     "y": 143,
+     "w": 14,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwajw2j",
+     "x": 690,
+     "y": 133,
+     "w": 20,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwarp25",
+     "x": 715,
+     "y": 126,
+     "w": 20,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwasur8",
+     "x": 741,
+     "y": 128,
+     "w": 14,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwaxl9g",
+     "x": 762,
+     "y": 128,
+     "w": 14,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwacuwc",
+     "x": 735,
+     "y": 153,
+     "w": 14,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwarn7p",
+     "x": 763,
+     "y": 154,
+     "w": 14,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwa9u6n",
+     "x": 767,
+     "y": 210,
+     "w": 14,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwae5l7",
+     "x": 769,
+     "y": 431,
+     "w": 14,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwaqjiz",
+     "x": 771,
+     "y": 452,
+     "w": 14,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwawrby",
+     "x": 750,
+     "y": 457,
+     "w": 14,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwazhc3",
+     "x": 764,
+     "y": 183,
+     "w": 20,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwaxuaw",
+     "x": 84,
+     "y": 231,
+     "w": 11,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwa8ui4",
+     "x": 128,
+     "y": 212,
+     "w": 11,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwaqkvp",
+     "x": 170,
+     "y": 212,
+     "w": 11,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwatwfl",
+     "x": 104,
+     "y": 283,
+     "w": 11,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwal78b",
+     "x": 156,
+     "y": 280,
+     "w": 11,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwaid9a",
+     "x": 100,
+     "y": 399,
+     "w": 11,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwapq43",
+     "x": 178,
+     "y": 394,
+     "w": 11,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwaf86v",
+     "x": 259,
+     "y": 183,
+     "w": 58,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwa6knv",
+     "x": 331,
+     "y": 183,
+     "w": 58,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwaehpk",
+     "x": 495,
+     "y": 182,
+     "w": 58,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwap0j8",
+     "x": 572,
+     "y": 182,
+     "w": 58,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwajnlo",
+     "x": 706,
+     "y": 442,
+     "w": 58,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwa85u5",
+     "x": 482,
+     "y": 246,
+     "w": 17,
+     "h": 56
+    },
+    {
+     "id": "k_ihwwau061",
+     "x": 482,
+     "y": 319,
+     "w": 17,
+     "h": 56
+    },
+    {
+     "id": "k_ihwwah2vf",
+     "x": 371,
+     "y": 329,
+     "w": 10,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwabg5p",
+     "x": 371,
+     "y": 361,
+     "w": 10,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwanmj6",
+     "x": 573,
+     "y": 280,
+     "w": 12,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwa5i9v",
+     "x": 573,
+     "y": 329,
+     "w": 12,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwaic0z",
+     "x": 573,
+     "y": 386,
+     "w": 12,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwa3car",
+     "x": 670,
+     "y": 219,
+     "w": 42,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwad79v",
+     "x": 645,
+     "y": 442,
+     "w": 42,
+     "h": 10
+    },
+    {
+     "id": "k_ihwwamzij",
+     "x": 749,
+     "y": 249,
+     "w": 16,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwav9ue",
+     "x": 749,
+     "y": 288,
+     "w": 16,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwalxvj",
+     "x": 749,
+     "y": 325,
+     "w": 16,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwaprew",
+     "x": 749,
+     "y": 362,
+     "w": 16,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwax9b3",
+     "x": 749,
+     "y": 400,
+     "w": 16,
+     "h": 8
+    },
+    {
+     "id": "k_ihwwax3p6",
+     "x": 776,
+     "y": 238,
+     "w": 12,
+     "h": 30
+    },
+    {
+     "id": "k_ihwwabs1u",
+     "x": 776,
+     "y": 287,
+     "w": 12,
+     "h": 30
+    },
+    {
+     "id": "k_ihwwagtfz",
+     "x": 776,
+     "y": 336,
+     "w": 12,
+     "h": 30
+    },
+    {
+     "id": "k_ihwwa209t",
+     "x": 62,
+     "y": 189,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwakd7r",
+     "x": 90,
+     "y": 189,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwaj7ta",
+     "x": 118,
+     "y": 189,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwaw51z",
+     "x": 146,
+     "y": 189,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwaqyq5",
+     "x": 174,
+     "y": 189,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwa9av2",
+     "x": 202,
+     "y": 189,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwalpes",
+     "x": 58,
+     "y": 184,
+     "w": 7,
+     "h": 34
+    },
+    {
+     "id": "k_ihwwajdup",
+     "x": 58,
+     "y": 214,
+     "w": 7,
+     "h": 34
+    },
+    {
+     "id": "k_ihwwabr3q",
+     "x": 210,
+     "y": 179,
+     "w": 7,
+     "h": 34
+    },
+    {
+     "id": "k_ihwwatp83",
+     "x": 210,
+     "y": 256,
+     "w": 7,
+     "h": 34
+    },
+    {
+     "id": "k_ihwwavfto",
+     "x": 210,
+     "y": 286,
+     "w": 7,
+     "h": 34
+    },
+    {
+     "id": "k_ihwwa3f8o",
+     "x": 62,
+     "y": 326,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwan363",
+     "x": 90,
+     "y": 326,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwa33yf",
+     "x": 154,
+     "y": 326,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwa4pen",
+     "x": 182,
+     "y": 326,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwa9kdx",
+     "x": 58,
+     "y": 329,
+     "w": 7,
+     "h": 34
+    },
+    {
+     "id": "k_ihwwai4pv",
+     "x": 58,
+     "y": 359,
+     "w": 7,
+     "h": 34
+    },
+    {
+     "id": "k_ihwwa0ev2",
+     "x": 58,
+     "y": 389,
+     "w": 7,
+     "h": 34
+    },
+    {
+     "id": "k_ihwwaaem2",
+     "x": 73,
+     "y": 454,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwaxls4",
+     "x": 101,
+     "y": 454,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwa32ro",
+     "x": 129,
+     "y": 454,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwasbq2",
+     "x": 171,
+     "y": 454,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwael8l",
+     "x": 199,
+     "y": 454,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwazv75",
+     "x": 227,
+     "y": 454,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwacua3",
+     "x": 244,
+     "y": 454,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwauyfd",
+     "x": 272,
+     "y": 454,
+     "w": 36,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwazbou",
+     "x": 0,
+     "y": 0,
+     "w": 832,
+     "h": 108
+    },
+    {
+     "id": "k_ihwwa0svh",
+     "x": 0,
+     "y": 0,
+     "w": 54,
+     "h": 464
+    },
+    {
+     "id": "k_ihwwamfn6",
+     "x": 783,
+     "y": 0,
+     "w": 49,
+     "h": 464
+    },
+    {
+     "id": "k_ihwwaooxp",
+     "x": 0,
+     "y": 458,
+     "w": 375,
+     "h": 6
+    },
+    {
+     "id": "k_ihwwafwlf",
+     "x": 509,
+     "y": 458,
+     "w": 400,
+     "h": 6
+    }
+   ],
+   "notas": [],
+   "ambiente": {
+    "color": "#20264a",
+    "fuerza": 0
+   },
+   "origen": {
+    "tipo": "juego",
+    "archivo": "js/maps/data/castle_maps.js",
+    "ancla": "window.CASTLE_MAPS.maps.training",
+    "clave": "training"
+   }
+  }
+ },
+ "prefabs": {},
+ "fx": {
+  "tajo_de_espada": {
+   "nombre": "Tajo de espada",
+   "dur": 0.3,
+   "bucle": false,
+   "capas": [
+    {
+     "tipo": "emisor",
+     "inicio": 0,
+     "nombre": "Filo",
+     "forma": "anillo",
+     "ancho": 44,
+     "alto": 30,
+     "rafaga": 34,
+     "tasa": 0,
+     "vida": [
+      0.12,
+      0.26
+     ],
+     "vel": [
+      20,
+      60
+     ],
+     "radial": true,
+     "apertura": 20,
+     "freno": 6,
+     "tam": [
+      3,
+      1
+     ],
+     "colores": [
+      "#ffffff",
+      "#dfe9f2",
+      "#8fb3c9"
+     ],
+     "colorSuave": true,
+     "figura": "linea",
+     "estirar": 1.5,
+     "suavizado": true,
+     "curvaAlfa": "entrada",
+     "alfa": [
+      1,
+      0
+     ],
+     "mezcla": "luz",
+     "angulo": -90,
+     "gravX": 0,
+     "gravY": 0,
+     "x": 0,
+     "y": 0,
+     "giro": 0,
+     "curvaTam": "lineal",
+     "curvaColor": "lineal",
+     "aparece": 0,
+     "estela": 0,
+     "orbita": 0,
+     "atraccion": 0,
+     "turbulencia": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "tamAzar": 0,
+     "ritmo": "constante"
+    },
+    {
+     "tipo": "destello",
+     "nombre": "Destello",
+     "inicio": 0,
+     "fin": 0.06,
+     "color": "#ffffff",
+     "fuerza": 0.2
+    }
+   ],
+   "id": "tajo_de_espada"
+  },
+  "subir_de_nivel": {
+   "nombre": "Subir de nivel",
+   "dur": 1.3,
+   "bucle": false,
+   "capas": [
+    {
+     "tipo": "emisor",
+     "inicio": 0,
+     "nombre": "Columna",
+     "forma": "circulo",
+     "ancho": 22,
+     "alto": 8,
+     "tasa": 60,
+     "fin": 0.8,
+     "vida": [
+      0.4,
+      0.8
+     ],
+     "vel": [
+      50,
+      110
+     ],
+     "angulo": -90,
+     "apertura": 6,
+     "tam": [
+      2,
+      1
+     ],
+     "colores": [
+      "#ffffff",
+      "#f6d573",
+      "#e8b83a"
+     ],
+     "colorSuave": true,
+     "figura": "linea",
+     "estirar": 1,
+     "mezcla": "luz",
+     "ritmo": "pico",
+     "rafaga": 0,
+     "gravX": 0,
+     "gravY": 0,
+     "freno": 0,
+     "alfa": [
+      1,
+      1
+     ],
+     "x": 0,
+     "y": 0,
+     "giro": 0,
+     "curvaTam": "lineal",
+     "curvaAlfa": "lineal",
+     "curvaColor": "lineal",
+     "suavizado": false,
+     "aparece": 0,
+     "estela": 0,
+     "orbita": 0,
+     "atraccion": 0,
+     "turbulencia": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "tamAzar": 0,
+     "radial": false
+    },
+    {
+     "tipo": "emisor",
+     "inicio": 0,
+     "nombre": "Anillo",
+     "rafaga": 1,
+     "tasa": 0,
+     "vida": [
+      0.6,
+      0.6
+     ],
+     "vel": [
+      0,
+      0
+     ],
+     "tam": [
+      4,
+      30
+     ],
+     "colores": [
+      "#fff7d6",
+      "#f6d573"
+     ],
+     "alfa": [
+      1,
+      0
+     ],
+     "curvaTam": "salida",
+     "figura": "anillo",
+     "suavizado": true,
+     "mezcla": "luz",
+     "forma": "punto",
+     "ancho": 0,
+     "alto": 0,
+     "angulo": -90,
+     "apertura": 30,
+     "gravX": 0,
+     "gravY": 0,
+     "freno": 0,
+     "x": 0,
+     "y": 0,
+     "giro": 0,
+     "curvaAlfa": "lineal",
+     "curvaColor": "lineal",
+     "colorSuave": false,
+     "aparece": 0,
+     "estela": 0,
+     "orbita": 0,
+     "atraccion": 0,
+     "turbulencia": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "tamAzar": 0,
+     "radial": false,
+     "ritmo": "constante",
+     "estirar": 0,
+     "oculta": true
+    },
+    {
+     "tipo": "emisor",
+     "inicio": 0.2,
+     "nombre": "Estrellas",
+     "rafaga": 12,
+     "tasa": 0,
+     "vida": [
+      0.5,
+      0.9
+     ],
+     "vel": [
+      40,
+      90
+     ],
+     "angulo": -90,
+     "apertura": 120,
+     "gravY": 90,
+     "tam": [
+      2,
+      1
+     ],
+     "colores": [
+      "#ffffff",
+      "#f6d573"
+     ],
+     "figura": "estrella",
+     "curvaTam": "pico",
+     "forma": "punto",
+     "ancho": 0,
+     "alto": 0,
+     "gravX": 0,
+     "freno": 0,
+     "alfa": [
+      1,
+      1
+     ],
+     "mezcla": "normal",
+     "x": 0,
+     "y": 0,
+     "giro": 0,
+     "curvaAlfa": "lineal",
+     "curvaColor": "lineal",
+     "colorSuave": false,
+     "suavizado": false,
+     "aparece": 0,
+     "estela": 0,
+     "orbita": 0,
+     "atraccion": 0,
+     "turbulencia": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "tamAzar": 0,
+     "radial": false,
+     "ritmo": "constante",
+     "estirar": 0,
+     "oculta": true
+    },
+    {
+     "tipo": "luz",
+     "nombre": "Luz",
+     "inicio": 0,
+     "color": "#ffe08a",
+     "radio": [
+      14,
+      60
+     ],
+     "fuerza": 0.6,
+     "apagar": true,
+     "curva": "salida"
+    }
+   ],
+   "id": "subir_de_nivel"
+  },
+  "llama_suave": {
+   "nombre": "Llama suave",
+   "dur": 1.4,
+   "bucle": true,
+   "capas": [
+    {
+     "tipo": "emisor",
+     "inicio": 0,
+     "nombre": "Llama",
+     "forma": "linea",
+     "ancho": 6,
+     "tasa": 30,
+     "vida": [
+      0.4,
+      0.75
+     ],
+     "vel": [
+      16,
+      30
+     ],
+     "angulo": -90,
+     "apertura": 18,
+     "turbulencia": 12,
+     "tam": [
+      6,
+      1
+     ],
+     "colores": [
+      "#fff3c4",
+      "#f2c14e",
+      "#e0803c",
+      "#b8483c"
+     ],
+     "colorSuave": true,
+     "curvaTam": "entrada",
+     "alfa": [
+      0.9,
+      0
+     ],
+     "curvaAlfa": "tardia",
+     "figura": "circulo",
+     "suavizado": true,
+     "mezcla": "luz",
+     "alto": 0,
+     "rafaga": 0,
+     "gravX": 0,
+     "gravY": 0,
+     "freno": 0,
+     "x": 0,
+     "y": 0,
+     "giro": 0,
+     "curvaColor": "lineal",
+     "aparece": 0,
+     "estela": 0,
+     "orbita": 0,
+     "atraccion": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "tamAzar": 0,
+     "radial": false,
+     "ritmo": "constante",
+     "estirar": 0
+    },
+    {
+     "tipo": "emisor",
+     "inicio": 0,
+     "nombre": "Brasas",
+     "tasa": 4,
+     "vida": [
+      0.6,
+      1.2
+     ],
+     "vel": [
+      26,
+      50
+     ],
+     "angulo": -90,
+     "apertura": 50,
+     "onda": 14,
+     "tam": [
+      1,
+      1
+     ],
+     "colores": [
+      "#f6d573",
+      "#e0803c"
+     ],
+     "curvaAlfa": "tardia",
+     "alfa": [
+      1,
+      0
+     ],
+     "forma": "punto",
+     "ancho": 0,
+     "alto": 0,
+     "rafaga": 0,
+     "gravX": 0,
+     "gravY": 0,
+     "freno": 0,
+     "figura": "pixel",
+     "mezcla": "normal",
+     "x": 0,
+     "y": 0,
+     "giro": 0,
+     "curvaTam": "lineal",
+     "curvaColor": "lineal",
+     "colorSuave": false,
+     "suavizado": false,
+     "aparece": 0,
+     "estela": 0,
+     "orbita": 0,
+     "atraccion": 0,
+     "turbulencia": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "tamAzar": 0,
+     "radial": false,
+     "ritmo": "constante",
+     "estirar": 0
+    },
+    {
+     "tipo": "luz",
+     "nombre": "Resplandor",
+     "inicio": 0,
+     "color": "#ffb04a",
+     "radio": [
+      46,
+      46
+     ],
+     "fuerza": 0.55,
+     "parpadeo": 2
+    }
+   ],
+   "id": "llama_suave"
+  },
+  "tajo_de_espada_2": {
+   "nombre": "Tajo de espada",
+   "dur": 0.3,
+   "bucle": false,
+   "capas": [
+    {
+     "tipo": "emisor",
+     "inicio": 0,
+     "nombre": "Filo",
+     "forma": "anillo",
+     "ancho": 44,
+     "alto": 30,
+     "rafaga": 34,
+     "tasa": 0,
+     "vida": [
+      0.12,
+      0.26
+     ],
+     "vel": [
+      20,
+      60
+     ],
+     "radial": true,
+     "apertura": 20,
+     "freno": 6,
+     "tam": [
+      3,
+      1
+     ],
+     "colores": [
+      "#ffffff",
+      "#dfe9f2",
+      "#8fb3c9"
+     ],
+     "colorSuave": true,
+     "figura": "linea",
+     "estirar": 1.5,
+     "suavizado": true,
+     "curvaAlfa": "entrada",
+     "alfa": [
+      1,
+      0
+     ],
+     "mezcla": "luz",
+     "angulo": -90,
+     "gravX": 0,
+     "gravY": 0,
+     "x": 0,
+     "y": 0,
+     "giro": 0,
+     "curvaTam": "lineal",
+     "curvaColor": "lineal",
+     "aparece": 0,
+     "estela": 0,
+     "orbita": 0,
+     "atraccion": 0,
+     "turbulencia": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "tamAzar": 0,
+     "ritmo": "constante"
+    },
+    {
+     "tipo": "destello",
+     "nombre": "Destello",
+     "inicio": 0,
+     "fin": 0.06,
+     "color": "#ffffff",
+     "fuerza": 0.2
+    }
+   ],
+   "id": "tajo_de_espada_2"
+  },
+  "nube_de_veneno": {
+   "nombre": "Nube de veneno",
+   "dur": 2,
+   "bucle": true,
+   "capas": [
+    {
+     "tipo": "emisor",
+     "inicio": 0,
+     "nombre": "Nube",
+     "forma": "circulo",
+     "ancho": 26,
+     "alto": 10,
+     "tasa": 9,
+     "vida": [
+      1,
+      1.8
+     ],
+     "vel": [
+      6,
+      14
+     ],
+     "angulo": -90,
+     "apertura": 60,
+     "turbulencia": 7,
+     "tam": [
+      6,
+      13
+     ],
+     "colores": [
+      "#a6cf5e",
+      "#74a84a",
+      "#2f4a2c"
+     ],
+     "colorSuave": true,
+     "alfa": [
+      0.5,
+      0
+     ],
+     "aparece": 0.2,
+     "figura": "humo",
+     "suavizado": true,
+     "rafaga": 0,
+     "gravX": 0,
+     "gravY": 0,
+     "freno": 0,
+     "mezcla": "normal",
+     "x": 0,
+     "y": 0,
+     "giro": 0,
+     "curvaTam": "lineal",
+     "curvaAlfa": "lineal",
+     "curvaColor": "lineal",
+     "estela": 0,
+     "orbita": 0,
+     "atraccion": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "tamAzar": 0,
+     "radial": false,
+     "ritmo": "constante",
+     "estirar": 0
+    },
+    {
+     "tipo": "emisor",
+     "inicio": 0,
+     "nombre": "Burbujas",
+     "forma": "circulo",
+     "ancho": 24,
+     "alto": 8,
+     "tasa": 6,
+     "vida": [
+      0.5,
+      0.9
+     ],
+     "vel": [
+      14,
+      26
+     ],
+     "angulo": -90,
+     "apertura": 10,
+     "tam": [
+      1,
+      3
+     ],
+     "colores": [
+      "#d6f29a"
+     ],
+     "figura": "anillo",
+     "curvaTam": "salida",
+     "rafaga": 0,
+     "gravX": 0,
+     "gravY": 0,
+     "freno": 0,
+     "alfa": [
+      1,
+      1
+     ],
+     "mezcla": "normal",
+     "x": 0,
+     "y": 0,
+     "giro": 0,
+     "curvaAlfa": "lineal",
+     "curvaColor": "lineal",
+     "colorSuave": false,
+     "suavizado": false,
+     "aparece": 0,
+     "estela": 0,
+     "orbita": 0,
+     "atraccion": 0,
+     "turbulencia": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "tamAzar": 0,
+     "radial": false,
+     "ritmo": "constante",
+     "estirar": 0
+    }
+   ],
+   "id": "nube_de_veneno"
+  },
+  "chispas_electricas": {
+   "nombre": "Chispas eléctricas",
+   "dur": 0.6,
+   "bucle": true,
+   "capas": [
+    {
+     "tipo": "emisor",
+     "inicio": 0,
+     "nombre": "Arcos",
+     "forma": "circulo",
+     "ancho": 14,
+     "tasa": 34,
+     "vida": [
+      0.06,
+      0.16
+     ],
+     "vel": [
+      70,
+      190
+     ],
+     "apertura": 360,
+     "radial": true,
+     "turbulencia": 60,
+     "tam": [
+      2,
+      1
+     ],
+     "colores": [
+      "#ffffff",
+      "#bfe9ff",
+      "#58a6ff"
+     ],
+     "figura": "linea",
+     "estirar": 1,
+     "mezcla": "luz",
+     "ritmo": "pulso",
+     "alto": 0,
+     "rafaga": 0,
+     "angulo": -90,
+     "gravX": 0,
+     "gravY": 0,
+     "freno": 0,
+     "alfa": [
+      1,
+      1
+     ],
+     "x": 0,
+     "y": 0,
+     "giro": 0,
+     "curvaTam": "lineal",
+     "curvaAlfa": "lineal",
+     "curvaColor": "lineal",
+     "colorSuave": false,
+     "suavizado": false,
+     "aparece": 0,
+     "estela": 0,
+     "orbita": 0,
+     "atraccion": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "tamAzar": 0
+    },
+    {
+     "tipo": "luz",
+     "nombre": "Chispazo",
+     "inicio": 0,
+     "color": "#8fd0ff",
+     "radio": [
+      26,
+      34
+     ],
+     "fuerza": 0.5,
+     "parpadeo": 4,
+     "curva": "pulso"
+    }
+   ],
+   "id": "chispas_electricas"
+  },
+  "hojas_que_caen": {
+   "nombre": "Hojas que caen",
+   "dur": 4,
+   "bucle": true,
+   "capas": [
+    {
+     "tipo": "emisor",
+     "inicio": 0,
+     "nombre": "Hojas",
+     "forma": "linea",
+     "ancho": 200,
+     "y": -70,
+     "tasa": 5,
+     "vida": [
+      3,
+      4.4
+     ],
+     "vel": [
+      16,
+      28
+     ],
+     "angulo": 80,
+     "apertura": 30,
+     "onda": 26,
+     "turbulencia": 5,
+     "gravY": 6,
+     "tam": [
+      3,
+      3
+     ],
+     "tamAzar": 0.3,
+     "colores": [
+      "#a6cf5e",
+      "#f2c14e",
+      "#e0803c"
+     ],
+     "curvaColor": "escalones",
+     "figura": "rombo",
+     "aparece": 0.08,
+     "alto": 0,
+     "rafaga": 0,
+     "gravX": 0,
+     "freno": 0,
+     "alfa": [
+      1,
+      1
+     ],
+     "mezcla": "normal",
+     "x": 0,
+     "giro": 0,
+     "curvaTam": "lineal",
+     "curvaAlfa": "lineal",
+     "colorSuave": false,
+     "suavizado": false,
+     "estela": 0,
+     "orbita": 0,
+     "atraccion": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "radial": false,
+     "ritmo": "constante",
+     "estirar": 0
+    }
+   ],
+   "id": "hojas_que_caen"
+  },
+  "humo_suave": {
+   "nombre": "Humo suave",
+   "dur": 2.4,
+   "bucle": true,
+   "capas": [
+    {
+     "tipo": "emisor",
+     "inicio": 0,
+     "nombre": "Humo",
+     "forma": "linea",
+     "ancho": 8,
+     "tasa": 11,
+     "vida": [
+      1.6,
+      2.6
+     ],
+     "vel": [
+      10,
+      18
+     ],
+     "angulo": -90,
+     "apertura": 22,
+     "turbulencia": 9,
+     "tam": [
+      5,
+      15
+     ],
+     "tamAzar": 0.3,
+     "colores": [
+      "#bdb4a3",
+      "#93897a",
+      "#6b6258"
+     ],
+     "colorSuave": true,
+     "alfa": [
+      0.55,
+      0
+     ],
+     "aparece": 0.15,
+     "curvaAlfa": "entrada",
+     "curvaTam": "salida",
+     "figura": "humo",
+     "suavizado": true,
+     "alto": 0,
+     "rafaga": 0,
+     "gravX": 0,
+     "gravY": 0,
+     "freno": 0,
+     "mezcla": "normal",
+     "x": 0,
+     "y": 0,
+     "giro": 0,
+     "curvaColor": "lineal",
+     "estela": 0,
+     "orbita": 0,
+     "atraccion": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "radial": false,
+     "ritmo": "constante",
+     "estirar": 0
+    }
+   ],
+   "id": "humo_suave",
+   "contorno": {
+    "grosor": 1,
+    "color": "#74a84a",
+    "forma": "redondo",
+    "alfa": 0.1
+   },
+   "vista": {
+    "x": 134,
+    "y": 116
+   }
+  },
+  "portal": {
+   "nombre": "Portal",
+   "dur": 2,
+   "bucle": true,
+   "capas": [
+    {
+     "tipo": "emisor",
+     "inicio": 0.1,
+     "nombre": "Remolino",
+     "forma": "anillo",
+     "ancho": 84,
+     "alto": 42,
+     "tasa": 46,
+     "vida": [
+      0.05,
+      1.2
+     ],
+     "vel": [
+      0,
+      4
+     ],
+     "apertura": 165,
+     "orbita": 220,
+     "atraccion": 26,
+     "tam": [
+      7,
+      2
+     ],
+     "colores": [
+      "#f5f1e6",
+      "#c9b47a",
+      "#a6cf5e",
+      "#5d7a9a"
+     ],
+     "colorSuave": true,
+     "curvaTam": "salida",
+     "estela": 3,
+     "mezcla": "luz",
+     "rafaga": 0,
+     "angulo": -30,
+     "gravX": 230,
+     "gravY": -90,
+     "freno": 5.5,
+     "alfa": [
+      1,
+      1
+     ],
+     "figura": "cruz",
+     "x": 0,
+     "y": 0,
+     "giro": 0,
+     "curvaAlfa": "lineal",
+     "curvaColor": "lineal",
+     "suavizado": false,
+     "aparece": 0.45,
+     "turbulencia": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "tamAzar": 0,
+     "radial": false,
+     "ritmo": "constante",
+     "estirar": 0
+    },
+    {
+     "tipo": "emisor",
+     "inicio": 0,
+     "nombre": "Centro",
+     "tasa": 14,
+     "vida": [
+      0.5,
+      0.9
+     ],
+     "vel": [
+      0,
+      3
+     ],
+     "apertura": 360,
+     "tam": [
+      9,
+      15
+     ],
+     "colores": [
+      "#b48cf2",
+      "#5d4bd6"
+     ],
+     "alfa": [
+      0.5,
+      0
+     ],
+     "figura": "brillo",
+     "mezcla": "luz",
+     "curvaAlfa": "suave",
+     "forma": "punto",
+     "ancho": 0,
+     "alto": 0,
+     "rafaga": 0,
+     "angulo": -90,
+     "gravX": 0,
+     "gravY": 0,
+     "freno": 0,
+     "x": 0,
+     "y": 0,
+     "giro": 0,
+     "curvaTam": "lineal",
+     "curvaColor": "lineal",
+     "colorSuave": false,
+     "suavizado": false,
+     "aparece": 0,
+     "estela": 0,
+     "orbita": 0,
+     "atraccion": 0,
+     "turbulencia": 0,
+     "rebote": 0,
+     "suelo": 40,
+     "tamAzar": 0,
+     "radial": false,
+     "ritmo": "constante",
+     "estirar": 0
+    },
+    {
+     "tipo": "luz",
+     "nombre": "Resplandor",
+     "inicio": 0,
+     "color": "#8a6cf0",
+     "radio": [
+      44,
+      44
+     ],
+     "fuerza": 0.5,
+     "parpadeo": 2
+    }
+   ],
+   "id": "portal",
+   "vista": {
+    "x": 112,
+    "y": 86
+   }
+  }
+ },
+ "npcs": {},
+ "misiones": [
+  {
+   "id": "paralax",
+   "nombre": "paralax",
+   "descripcion": "",
+   "requiere": "",
+   "pasos": [
+    {
+     "tipo": "hablar",
+     "texto": ""
+    },
+    {
+     "tipo": "derrotar",
+     "texto": ""
+    }
+   ],
+   "recompensa": {
+    "monedas": 0,
+    "exp": 0,
+    "bandera": ""
+   }
+  }
+ ],
+ "poses": {},
+ "notas": [],
+ "pixel": {
+  "ui_panel_brown": {
+   "activa": 0,
+   "sincronizado": 1791584094183,
+   "capas": [
+    {
+     "id": "c1",
+     "nombre": "Capa 1",
+     "visible": true,
+     "opacidad": 1,
+     "asset": "ui_panel_brown__capa_c1"
+    },
+    {
+     "id": "cmv1i9yuz",
+     "nombre": "Capa 2",
+     "visible": true,
+     "opacidad": 1,
+     "asset": "ui_panel_brown__capa_cmv1i9yuz"
+    }
+   ]
+  }
+ },
+ "ui": {
+  "seccion": "mapa",
+  "convertir": {
+   "quitarFondo": true,
+   "tolFondo": 22,
+   "colorFondo": null,
+   "huecos": false,
+   "fino": true,
+   "sombra": 25,
+   "recortar": true,
+   "modoTam": "ancho",
+   "alto": 32,
+   "ancho": 32,
+   "factor": 4,
+   "metodo": "dominante",
+   "usarPaleta": true,
+   "fuerza": 1,
+   "maxColores": 32,
+   "tramado": 0,
+   "bordesDuros": true,
+   "umbral": 110,
+   "limpiar": true,
+   "contorno": "ninguno",
+   "colorContorno": "#1b1420"
+  },
+  "pixel": "stone_wall_v0_63mmfjnritm81_2",
+  "revisado": true,
+  "mapa": "mapa_nuevo"
+ }
+}

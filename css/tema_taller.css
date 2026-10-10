@@ -1,0 +1,186 @@
+/* Estilo "Taller medieval" (se elige con el botón del pincel de la barra de arriba; ver js/core/tema.js).
+   Madera oscura alrededor de lo que se dibuja (para que los colores del pixel art se lean bien) y pergamino en los
+   paneles, ventanas y menús. Botones más grandes, títulos con letra de libro, ayudas resumidas y cursores propios. */
+
+/* ---------------------------------------------------------------- colores: madera */
+body.tema-taller {
+  --fondo: #1f1712; --panel: #2b2019; --panel2: #3a2c21; --hueco: #17110c; --linea: #4e3b2b; --linea2: #6c533b;
+  --texto: #f3e7cc; --suave: #cfb88f; --tenue: #9c8566;
+  --oro: #e0a93f; --oro2: #f3c766; --sobre-oro: #2a1806;
+  --azul: #78acd9; --verde: #84b46c; --rojo: #dd5c43; --violeta: #b791e8;
+  --r: 9px;
+  --titulos: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  font-size: 14px;
+  background: #1f1712;
+}
+
+/* ---------------------------------------------------------------- colores: pergamino (paneles, ventanas, menús, cajas) */
+body.tema-taller :is(.panel, .acople-caja, .ventana, .menu-ctx, .caja, .paso, .problema, .indicador.pergamino) {
+  --panel: #efe2c4; --panel2: #e3d2ad; --hueco: #f8f0dc; --linea: #ccb48a; --linea2: #b0956a;
+  --texto: #3a2817; --suave: #6b5333; --tenue: #8b7453;
+  --oro: #c58b26; --oro2: #dba13c; --sobre-oro: #fff7e4;
+  --azul: #2f6aa3; --verde: #3f7a34; --rojo: #b23b29;
+  color: var(--texto);
+}
+body.tema-taller .panel, body.tema-taller .acople-caja {
+  background: linear-gradient(180deg, #f1e5c9, #eadbb9);
+}
+
+/* ---------------------------------------------------------------- estructura: un poco más de aire */
+body.tema-taller #app { grid-template: 54px 44px 1fr 28px / minmax(0, 1fr); }
+body.tema-taller.riel-vertical #app { grid-template: 54px 1fr 28px / 96px minmax(0, 1fr); }
+body.tema-taller #barra {
+  gap: 8px; padding: 0 14px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.018) 0 2px, transparent 2px 9px),
+    linear-gradient(180deg, #3d2c1f, #2a1e15);
+  border-bottom: 2px solid #120c08; box-shadow: inset 0 -1px 0 #5c4430;
+}
+body.tema-taller .marca { font-family: var(--titulos); font-size: 17px; letter-spacing: .4px; color: var(--oro2); }
+body.tema-taller #estado { background: #17110c; border-top: 1px solid #4e3b2b; font-size: 12.5px; }
+body.tema-taller #estado-herr { font-family: var(--titulos); font-size: 13.5px; }
+
+/* pestañas de secciones: como señaladores de un libro */
+body.tema-taller #riel { background: #19120d; border-bottom: 2px solid #c9a86a; padding: 0 10px; gap: 3px; align-items: flex-end; }
+body.tema-taller .riel-btn {
+  height: 36px; padding: 0 13px; gap: 7px; font-family: var(--titulos); font-size: 14px; color: #cdb48a;
+  border-radius: 10px 10px 0 0;
+}
+body.tema-taller .riel-btn:hover { background: #2e2219; color: #f3e7cc; }
+body.tema-taller .riel-btn.activo, body.tema-taller:not(.riel-vertical) .riel-btn.activo {
+  background: linear-gradient(180deg, #f6ebd1, #e9d8b3); color: #3a2817; font-weight: 700;
+  box-shadow: 0 -1px 0 #fff8 inset, 0 0 0 1px #c9a86a;
+}
+body.tema-taller .riel-btn .ico { width: 18px; height: 18px; }
+body.tema-taller .riel-sep { background: none; width: 14px; height: 36px; position: relative; }
+body.tema-taller .riel-sep::after { content: '◆'; position: absolute; left: 3px; top: 10px; font-size: 8px; color: #7b5d3b; }
+body.tema-taller.riel-vertical #riel { border-bottom: 0; border-right: 2px solid #c9a86a; }
+body.tema-taller.riel-vertical .riel-btn { height: auto; border-radius: 10px; font-size: 12.5px; }
+body.tema-taller.riel-vertical .riel-sep { width: auto; height: 12px; }
+body.tema-taller.riel-vertical .riel-sep::after { left: 50%; top: 0; }
+
+/* ---------------------------------------------------------------- botones */
+body.tema-taller .btn { height: 34px; padding: 0 13px; border-radius: var(--r); }
+body.tema-taller .btn:hover { background: var(--panel2); border-color: var(--oro); box-shadow: 0 0 0 1px color-mix(in srgb, var(--oro) 40%, transparent); }
+body.tema-taller .btn.solo-ico { width: 34px; }
+body.tema-taller .btn.chico { height: 28px; padding: 0 10px; font-size: 12.5px; }
+body.tema-taller .btn.chico.solo-ico { width: 28px; }
+body.tema-taller :is(.btn.solo-ico, .herr-btn) { padding: 0; }
+body.tema-taller .item .btn { height: 26px; width: 26px; padding: 0; }
+body.tema-taller .acople-barra .btn { height: 20px; width: 22px; padding: 0; }
+body.tema-taller .herr.rotulada .herr-btn { padding: 0 8px; }
+.btn .ico { flex: none; }
+body.tema-taller .btn.pri {
+  background: linear-gradient(180deg, #f0c25a, #d69a2f); border-color: #8f611a; color: #2a1806;
+  box-shadow: inset 0 1px 0 #fff3, 0 1px 0 #0003;
+}
+body.tema-taller .btn.pri:hover { background: linear-gradient(180deg, #f6d07a, #e0a93f); }
+body.tema-taller .btn.activo { background: linear-gradient(180deg, #f0c25a, #d69a2f); border-color: #8f611a; color: #2a1806; }
+body.tema-taller .ico { stroke-width: 2; }
+body.tema-taller .chip { padding: 4px 11px; font-size: 12.5px; }
+body.tema-taller .proy { border-radius: var(--r); padding: 6px 12px; }
+
+/* columna de herramientas: botones grandes, como fichas */
+body.tema-taller .herr { padding: 8px 6px; gap: 4px; background: linear-gradient(90deg, #2b2019, #251b14); }
+body.tema-taller .herr-btn { width: 42px; height: 42px; border-radius: 10px; }
+body.tema-taller .herr-btn.activo { background: linear-gradient(180deg, #f0c25a, #d69a2f); border-color: #8f611a; color: #2a1806; }
+body.tema-taller .herr-btn .ico { width: 22px; height: 22px; }
+
+/* barras flotantes sobre el lienzo */
+body.tema-taller .tira { background: rgba(43,32,25,.96); border-color: #5c4430; border-radius: 12px; padding: 5px; }
+
+/* ---------------------------------------------------------------- paneles */
+body.tema-taller .bloque { padding: 14px 16px 16px; border-bottom: 1px solid var(--linea); }
+body.tema-taller .bloque-tit { font-family: var(--titulos); font-size: 15px; font-weight: 700; color: var(--texto); margin-bottom: 10px; letter-spacing: .2px; }
+body.tema-taller .bloque-tit::before { content: '◆'; font-size: 8px; color: var(--oro); margin-right: 2px; }
+body.tema-taller .campo { grid-template-columns: 112px 1fr; gap: 10px; margin: 7px 0; }
+body.tema-taller .campo-rot { font-size: 13px; }
+body.tema-taller .in { height: 32px; border-radius: 8px; }
+body.tema-taller .ayuda-txt { font-size: 13px; }
+body.tema-taller .nota-txt { font-size: 12px; font-style: italic; }
+body.tema-taller .pest { background: #e3d2ad; border-bottom: 1px solid var(--linea); }
+body.tema-taller .pest button { height: 38px; font-family: var(--titulos); font-size: 13.5px; }
+body.tema-taller .pest button.activo { color: #3a2817; border-bottom: 3px solid var(--oro); background: #f3e8cf; font-weight: 700; }
+body.tema-taller .pest-caja > .pest { background: #e3d2ad; }
+body.tema-taller .pila-cab {
+  height: 32px; padding: 0 12px; font-family: var(--titulos); font-size: 14px; font-weight: 700; color: #4a341d;
+  background: linear-gradient(180deg, #e6d4ad, #dcc79c); border-bottom: 1px solid #c2a676; border-top: 1px solid #f7eedb;
+}
+body.tema-taller .pila-cab:hover { color: #2a1806; }
+body.tema-taller .pila-borde { background: #ccb48a; border-top-color: #b0956a; }
+body.tema-taller .acople-barra { height: 22px; background: #e3d2ad; border-bottom-color: #ccb48a; }
+body.tema-taller .acople-barra:hover { background: #dcc79c; }
+body.tema-taller .item { min-height: 34px; padding: 5px 8px; border-radius: 8px; }
+body.tema-taller .item.activo { background: #f3d991; border-color: #c58b26; }
+body.tema-taller .tarjeta { border-radius: 10px; background: #f8f0dc; }
+body.tema-taller .tarjeta.activo { background: #f3d991; }
+body.tema-taller .etq { background: #e3d2ad; color: #6b5333; }
+body.tema-taller .etq.oro { background: #f0d48f; color: #6a4a10; }
+body.tema-taller .etq.verde { background: #cfe4c0; color: #2f5a25; }
+body.tema-taller .etq.rojo { background: #f2c9bf; color: #8a2a1b; }
+body.tema-taller .etq.azul { background: #c9dcef; color: #24527f; }
+body.tema-taller .capas-lista .capa-carpeta { background: #e3d2ad; }
+body.tema-taller .panel kbd, body.tema-taller .ventana kbd { background: #f8f0dc; }
+
+/* ayudas resumidas: las notas largas muestran dos renglones y se abren al pasar el mouse */
+body.tema-taller.ayudas-cortas :is(p, div).nota-txt {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+body.tema-taller.ayudas-cortas :is(p, div).nota-txt:hover { display: block; -webkit-line-clamp: unset; }
+
+/* ---------------------------------------------------------------- ventanas, menús, avisos */
+body.tema-taller .ven-fondo { background: rgba(22,13,6,.62); }
+body.tema-taller .ventana { background: linear-gradient(180deg, #f3e8cf, #eadbb9); border: 1px solid #8f6d42; border-radius: 14px; box-shadow: 0 0 0 4px rgba(43,32,25,.55), 0 24px 70px rgba(0,0,0,.6); }
+body.tema-taller .ven-cab { border-bottom: 1px solid #ccb48a; padding: 12px 12px 12px 18px; }
+body.tema-taller .ven-cab h2 { font-family: var(--titulos); font-size: 19px; color: #3a2817; }
+body.tema-taller .ven-cuerpo p { color: #5b4429; }
+body.tema-taller .ven-pie { border-top: 1px solid #ccb48a; }
+body.tema-taller .menu-ctx { background: #f3e8cf; border-color: #b0956a; border-radius: 10px; padding: 5px; }
+body.tema-taller .menu-op { padding: 7px 10px; font-size: 13.5px; border-radius: 7px; }
+body.tema-taller .menu-op:hover, body.tema-taller .menu-op:focus, body.tema-taller .menu-op.abre { background: #e0a93f; color: #2a1806; }
+body.tema-taller .menu-tit { font-family: var(--titulos); text-transform: none; font-size: 13px; letter-spacing: 0; color: #8b7453; }
+body.tema-taller .menu-sep { background: #ccb48a; }
+body.tema-taller .aviso { background: #f3e8cf; color: #3a2817; border-color: #b0956a; border-radius: 12px; font-size: 13.5px; }
+body.tema-taller .indicador { background: #2b2019; border-color: #e0a93f; border-radius: 10px; }
+body.tema-taller .ind-nombre { font-family: var(--titulos); font-size: 14px; }
+body.tema-taller .ind-desc { color: #e6d6b5; font-size: 12.5px; }
+body.tema-taller ::-webkit-scrollbar-thumb { background: #6c533b; border-color: transparent; }
+body.tema-taller :is(.panel, .acople-caja, .ventana) ::-webkit-scrollbar-thumb { background: #c2a676; }
+
+/* páginas (Inicio, Estilo, Revisor…) */
+body.tema-taller .pagina h1 { font-family: var(--titulos); font-size: 30px; color: #f3c766; letter-spacing: .3px; }
+body.tema-taller .pagina h2 { font-family: var(--titulos); font-size: 18px; }
+body.tema-taller .caja, body.tema-taller .paso, body.tema-taller .problema { background: linear-gradient(180deg, #f3e8cf, #eadbb9); border-color: #b0956a; border-radius: 12px; }
+body.tema-taller .vacio-tit { font-family: var(--titulos); font-size: 17px; }
+
+/* línea de tiempo y cuadros */
+body.tema-taller .cuadro, body.tema-taller .tl-cuadro { background: #33261c; border-radius: 8px; }
+body.tema-taller .cuadros, body.tema-taller .tl-caja { background: #17110c; }
+
+/* ventanas de sección */
+body.tema-taller .vsec { border-color: #8f6d42; border-radius: 12px; }
+body.tema-taller .vsec-barra { background: linear-gradient(180deg, #3d2c1f, #2a1e15); height: 36px; }
+body.tema-taller .vsec-tit { font-family: var(--titulos); font-size: 15px; color: #f3c766; }
+
+/* ---------------------------------------------------------------- cursores del taller (también sirven con el estilo Profesional) */
+body.cursores-taller { cursor: var(--cur-flecha); }
+body.cursores-taller :is(button, .btn, a, .item, .tarjeta, .bib-tarjeta, .chip, .proy, .riel-btn, .menu-op, select, label.chk, .chk input,
+  .muestra, .cuadro, .tl-cuadro, .pila-cab, .pose-celda, .par-color button, .in-color, input[type=range], input[type=checkbox]) { cursor: var(--cur-senala); }
+body.cursores-taller :is(.acople-barra, .capas-lista .item, .capas-lista .capa-carpeta) { cursor: var(--cur-mano); }
+body.cursores-taller :is(.acople-barra:active, .capas-lista .item:active) { cursor: var(--cur-puno); }
+body.cursores-taller :is(.vsec-barra) { cursor: var(--cur-mover); }
+body.cursores-taller :is(input[type=text], input[type=search], input[type=number], textarea) { cursor: text; }
+body.cursores-taller .tablero canvas.lienzo, body.cursores-taller .marca-lienzo { cursor: var(--cur-mira); }
+body.cursores-taller :is(.menu-op.off, .btn[disabled]) { cursor: var(--cur-flecha); }
+
+/* barra de arriba en pantallas no tan anchas: los botones de la derecha quedan solo con su ícono (el nombre sale al pasar el mouse) */
+@media (max-width: 1720px) {
+  body.tema-taller #barra > .btn.plano > span:not(.cuenta) { display: none; }
+  body.tema-taller #barra > .btn.plano { padding: 0 9px; }
+  body.tema-taller .chip { padding: 3px 9px; font-size: 12px; }
+}
+@media (max-width: 1360px) {
+  body.tema-taller .chip span { display: none; }
+  body.tema-taller #barra > .btn:not(.plano):not(.pri) > span { display: none; }
+}
+body.tema-taller .pest-caja .pila-cab { top: 41px; }
