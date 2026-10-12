@@ -191,11 +191,11 @@
   };
 
   // ---------------------------------------------------------------- selección flotante
-  Px.levantar = () => {
+  Px.levantar = nombre => {
     if (Px.flot) return;
     const f = Px.FR(),
       d = Px.leer(),
-      fin = Px.cambioCapa('Mover');
+      fin = Px.cambioCapa(nombre || 'Mover');
     const m = Px.sel
       ? Px.sel.m
       : (() => {

@@ -6,11 +6,19 @@
   const GRUPOS = [
     ['inicio', 'estilo', 'biblioteca'],
     ['mapa'],
-    ['convertir', 'texturas', 'pixel'],
+    ['texturas', 'pixel'],
     ['anim', 'fx'],
     ['npc', 'misiones', 'interfaz'],
-    ['revisor', 'notas', 'portfolio']
+    ['revisor', 'portfolio']
   ];
+  // secciones hermanas: comparten una sola pestaña; adentro se elige con los botoncitos que aparecen al lado
+  const FAMILIAS = {
+    texturas: { nombre: 'Texturas', hijos: ['texturas', 'convertir'], rotulos: ['Texturas y suelos', 'Convertir referencias'] },
+    revisor: { nombre: 'Revisor', hijos: ['revisor', 'notas'], rotulos: ['Revisión', 'Notas'] }
+  };
+  const familiaDe = id => Object.keys(FAMILIAS).find(k => FAMILIAS[k].hijos.includes(id)) || null;
+  const ultimoHijo = {};
+  CK.familiaDe = familiaDe;
   let actual = null;
 
   // ------------------------------------------------------------ secciones
@@ -32,6 +40,8 @@
   CK.ir = (id, arg, o = {}) => {
     const s = CK.secciones[id];
     if (!s) return;
+    // cambios sin aplicar: pregunta (Aplicar / Descartar / Seguir) y recién después cambia de pestaña
+    if (CK.aplicar && CK.P && !CK.aplicar.antesDeIr(id, arg, o)) return;
     if (!CK.P && id !== 'inicio') {
       CK.aviso('Primero creá o abrí un proyecto.', 'info');
       id = 'inicio';
@@ -70,6 +80,7 @@
     document.getElementById('estado-herr').textContent = sec.nombre;
     CK.estado(sec.desc);
     if (sec.mostrar) sec.mostrar(arg);
+    if (CK.guia) CK.guia.alMostrar(id);
   };
   /** Vuelve a la sección en la que estabas antes. */
   CK.volver = () => {
@@ -441,9 +452,19 @@
   const pintarRiel = () => {
     const r = document.getElementById('riel');
     if (!r || !r.dataset.listo) return;
+    const fa = familiaDe(CK.seccion_actual);
+    if (fa) ultimoHijo[fa] = CK.seccion_actual;
     r.querySelectorAll('.riel-btn').forEach(b => {
-      b.classList.toggle('activo', b.dataset.id === CK.seccion_actual);
-      b.classList.toggle('flotante', CK.flotantes.has(b.dataset.id));
+      const f = b.dataset.familia;
+      b.classList.toggle('activo', f ? f === fa : b.dataset.id === CK.seccion_actual);
+      b.classList.toggle('flotante', f ? FAMILIAS[f].hijos.some(x => CK.flotantes.has(x)) : CK.flotantes.has(b.dataset.id));
+    });
+    r.querySelectorAll('.riel-sub').forEach(sb => {
+      sb.classList.toggle('ver', sb.dataset.familia === fa);
+      sb.querySelectorAll('button').forEach(x => {
+        x.classList.toggle('activo', x.dataset.id === CK.seccion_actual);
+        x.classList.toggle('flotante', CK.flotantes.has(x.dataset.id));
+      });
     });
     if (bVolver) {
       const prev = [...historial].reverse().find(q => q !== CK.seccion_actual && CK.secciones[q] && !CK.flotantes.has(q));
@@ -456,14 +477,25 @@
     document.body.classList.toggle('riel-vertical', esVertical());
     GRUPOS.forEach((g, gi) => {
       if (gi) r.append(h('div.riel-sep'));
-      g.forEach(id => {
-        const s = CK.secciones[id];
-        if (!s) return;
+      g.forEach(id0 => {
+        const fam = FAMILIAS[id0] ? id0 : null,
+          s0 = CK.secciones[id0];
+        if (!s0) return;
+        // en una familia, el clic derecho y el arrastre actúan sobre la hermana que se está viendo
+        const cual = () => (fam ? ultimoHijo[fam] || id0 : id0);
         const b = h(
           'button.riel-btn',
-          { type: 'button', 'data-id': id, html: CK.ico(s.ico, esVertical() ? 24 : 16), onclick: () => CK.ir(id) },
-          h('span', s.corto || s.nombre)
+          {
+            type: 'button',
+            'data-id': id0,
+            'data-familia': fam || null,
+            html: CK.ico(s0.ico, esVertical() ? 24 : 16),
+            onclick: () => CK.ir(cual())
+          },
+          h('span', fam ? FAMILIAS[fam].nombre : s0.corto || s0.nombre)
         );
+        const id = id0,
+          s = s0;
         CK.tip(
           b,
           s.nombre,
@@ -471,8 +503,10 @@
           s.atajo,
           esVertical() ? 'der' : 'abajo'
         );
-        b.addEventListener('contextmenu', e =>
-          CK.menu(e, [
+        b.addEventListener('contextmenu', e => {
+          const id = cual(),
+            s = CK.secciones[id];
+          return CK.menu(e, [
             { titulo: s.nombre },
             { txt: 'Abrir acá', ico: 'ok', on: () => (CK.flotantes.has(id) ? CK.pegarSeccion(id) : CK.ir(id)) },
             id !== 'inicio' && !CK.flotantes.has(id)
@@ -489,10 +523,11 @@
               ico: 'ajustes',
               on: alternarRiel
             }
-          ])
-        );
+          ]);
+        });
         // arrastrar la pestaña fuera de la barra la abre en una ventana
         b.addEventListener('pointerdown', e => {
+          const id = cual();
           if (e.button !== 0 || id === 'inicio') return;
           const x0 = e.clientX,
             y0 = e.clientY;
@@ -511,6 +546,36 @@
           window.addEventListener('pointerup', fin);
         });
         r.append(b);
+        if (fam)
+          r.append(
+            h(
+              'div.riel-sub',
+              { 'data-familia': fam },
+              FAMILIAS[fam].hijos.map((x, k) =>
+                CK.secciones[x]
+                  ? CK.tip(
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          'data-id': x,
+                          onclick: () => CK.ir(x),
+                          oncontextmenu: e =>
+                            CK.menu(e, [
+                              { titulo: CK.secciones[x].nombre },
+                              { txt: 'Abrir en una ventana aparte', ico: 'despegar', on: () => CK.flotar(x) },
+                              { txt: 'Llevar a otra pantalla', ico: 'monitor', on: () => CK.aOtraPantalla(x) }
+                            ])
+                        },
+                        FAMILIAS[fam].rotulos[k]
+                      ),
+                      CK.secciones[x].nombre,
+                      CK.secciones[x].desc
+                    )
+                  : null
+              )
+            )
+          );
       });
     });
     r.dataset.listo = '1';
@@ -533,6 +598,29 @@
       .replace(/\.800/g, '.8')
       .replace(/\.200/g, '.2');
   let chipProy, chipEd, chipJu, cuentaRev, cuentaNot, bDes, bRe;
+  /** Historial: los últimos pasos; clic en uno deshace o rehace hasta ahí. */
+  const irAlPaso = n => {
+    const H = CK.hist;
+    let guarda = 200;
+    while (H.pos > n && guarda--) H.deshacer();
+    while (H.pos < n && guarda--) H.rehacer();
+  };
+  CK.irAlPaso = irAlPaso;
+  const menuHistorial = e => {
+    const H = CK.hist,
+      desde = Math.max(0, H.pila.length - 30),
+      items = [{ titulo: H.pila.length ? 'Historial (' + H.pila.length + ' pasos)' : 'Historial vacío' }];
+    if (desde > 0) items.push({ txt: '… ' + desde + ' pasos más viejos', off: true });
+    items.push({ txt: 'Como estaba al empezar', ico: H.pos === 0 ? 'ok' : 'nada', on: () => irAlPaso(0), off: !H.pila.length });
+    for (let i = desde; i < H.pila.length; i++)
+      items.push({
+        txt: (i >= H.pos ? '↷ ' : '') + H.pila[i].nombre,
+        ico: H.pos === i + 1 ? 'ok' : 'nada',
+        on: () => irAlPaso(i + 1)
+      });
+    if (H.pila.length > H.pos) items.push('-', { txt: 'Los pasos con ↷ están deshechos: elegí uno para rehacer hasta ahí.', off: true });
+    CK.menu(e, items);
+  };
   const barra = () => {
     const b = CK.vaciar(document.getElementById('barra'));
     chipProy = h(
@@ -624,6 +712,13 @@
       h('div.barra-sep'),
       bDes,
       bRe,
+      CK.btn({
+        ico: 'tiempo',
+        tip: 'Historial',
+        desc: 'La lista de lo último que hiciste. Clic en cualquier paso para volver ahí (o adelantarte si lo habías deshecho).',
+        cls: 'plano',
+        on: e => menuHistorial(e)
+      }),
       h('div.barra-sep'),
       CK.btn({
         ico: 'exportar',
@@ -634,7 +729,7 @@
       CK.btn({
         ico: 'probar',
         txt: 'Probar',
-        desc: 'Abre CastleKnight en otra pestaña para ver los cambios funcionando.',
+        desc: 'Exporta lo último y abre CastleKnight en otra pestaña, en el mapa que estabas editando.',
         tecla: 'F5',
         cls: 'pri',
         on: () => CK.juego.probar()
@@ -655,14 +750,30 @@
       bInd,
       CK.btn({
         ico: 'tema',
-        tip: 'Estilo de la interfaz',
-        desc: 'Elegí entre el estilo Profesional y el Taller medieval (madera y pergamino, botones más grandes). También prende o apaga los cursores del taller y las ayudas resumidas.',
+        tip: 'Interfaz',
+        desc: 'Modo simple o completo, tamaño de la interfaz, cursores elegantes y los recorridos guiados de cada sección.',
         cls: 'plano',
         on: e => CK.temaUI.menu(e)
+      }),
+      CK.btn({
+        ico: 'ayuda',
+        tip: '¿Cómo hago…?',
+        desc: 'Recetas cortas para las tareas de siempre (pintar el suelo, animar una bandera, ponerle sonido a un golpe…), con botones que te llevan directo.',
+        cls: 'plano',
+        on: () => CK.guia.ventana()
       }),
       CK.btn({ ico: 'teclado', tip: 'Atajos de teclado', desc: 'Lista de todas las teclas rápidas.', tecla: '?', cls: 'plano', on: atajos })
     );
     pintarBarra();
+    // si no entra todo, los botones de la derecha quedan solo con su ícono (el nombre sale al pasar el mouse)
+    const ajustar = () => {
+      b.classList.remove('compacta', 'muy-compacta');
+      if (b.scrollWidth > b.clientWidth + 2) b.classList.add('compacta');
+      if (b.scrollWidth > b.clientWidth + 2) b.classList.add('muy-compacta');
+    };
+    new ResizeObserver(CK.debounce(ajustar, 60)).observe(b);
+    CK.on('interfaz', () => setTimeout(ajustar, 60));
+    setTimeout(ajustar, 50);
   };
   const pintarBarra = () => {
     if (!chipProy) return;
@@ -751,6 +862,15 @@
               txt: 'Descargar copia',
               desc: 'Baja todo el proyecto en un solo archivo .ckproj, con sus imágenes adentro.',
               on: () => CK.descargar(CK.empaquetar(), CK.slug(CK.P.nombre) + '.ckproj')
+            }),
+            CK.btn({
+              ico: 'tiempo',
+              txt: 'Copias automáticas',
+              desc: 'Copias de todo el proyecto que el editor guarda solo cada 10 minutos. Volvé a cualquiera.',
+              on: () => {
+                cerrar();
+                CK.copias.ventana();
+              }
             }),
             CK.btn({
               ico: 'version',
@@ -870,80 +990,130 @@
     );
     CK.ventana({ titulo: 'Versiones guardadas', ancho: 500, cuerpo });
   };
+  // atajos que no tienen un botón propio (los demás se leen solos de los botones de cada sección)
+  const ATAJOS_EXTRA = {
+    general: [
+      ['Ctrl + S', 'Guardar'],
+      ['Ctrl + Z / Ctrl + Y', 'Deshacer / Rehacer'],
+      ['Ctrl + K', 'Buscar cualquier acción, sección o asset'],
+      ['F5', 'Probar en el juego (otra pestaña)'],
+      ['Alt + ←', 'Volver a la sección anterior'],
+      ['Espacio + arrastrar', 'Mover la vista'],
+      ['Rueda', 'Acercar o alejar'],
+      ['0 / + / −', 'Ver todo / acercar / alejar'],
+      ['Ctrl + Mayús + 0', 'Restablecer el espacio de trabajo'],
+      ['?', 'Esta lista']
+    ],
+    mapa: [
+      ['Supr', 'Borrar lo seleccionado'],
+      ['Ctrl + D', 'Duplicar'],
+      ['Ctrl + G / Ctrl + Mayús + G', 'Agrupar / desagrupar'],
+      ['H', 'Voltear lo seleccionado'],
+      ['Flechas', 'Mover 1 píxel (Mayús: 1 tile)'],
+      ['[ y ]', 'Tamaño del pincel / enviar atrás y traer adelante'],
+      ['R / F / Mayús + F', 'Tiles: girar / espejo horizontal / vertical'],
+      ['Alt + clic', 'Tiles: tomar la pieza del mapa']
+    ],
+    pixel: [
+      ['Alt + clic', 'Cuentagotas'],
+      ['X', 'Intercambiar colores'],
+      ['[ y ]', 'Tamaño de la punta'],
+      [', y .', 'Cuadro anterior / siguiente'],
+      ['Enter / Esc', 'Aplicar / cancelar la transformación']
+    ],
+    anim: [
+      ['Ctrl + D / Ctrl + C / Ctrl + V', 'Duplicar / copiar / pegar cuadros'],
+      ['Supr', 'Borrar cuadros'],
+      ['Alt + ← / →', 'Mover el cuadro'],
+      ['Espacio', 'Reproducir / pausar']
+    ]
+  };
   const atajos = () => {
-    const filas = [
-      [
-        'General',
-        [
-          ['Ctrl + S', 'Guardar'],
-          ['Ctrl + Z / Ctrl + Y', 'Deshacer / Rehacer'],
-          ['F5', 'Probar en el juego'],
-          ['Espacio + arrastrar', 'Mover la vista'],
-          ['Rueda', 'Acercar o alejar'],
-          ['0', 'Ver todo'],
-          ['Ctrl + Mayús + 0', 'Restablecer el espacio de trabajo'],
-          ['?', 'Esta lista']
-        ]
-      ],
-      [
-        'Mapa',
-        [
-          ['V', 'Seleccionar y mover'],
-          ['B', 'Pintar'],
-          ['E', 'Borrar'],
-          ['G', 'Rellenar'],
-          ['T', 'Terreno con bordes'],
-          ['W / X', 'Zona caminable / bloqueada'],
-          ['C', 'Colisión'],
-          ['L', 'Luz'],
-          ['N', 'Nota'],
-          ['M', 'Marcar para animar'],
-          ['Supr', 'Borrar lo seleccionado'],
-          ['Ctrl + D', 'Duplicar'],
-          ['Ctrl + G', 'Agrupar'],
-          ['H', 'Voltear'],
-          ['Flechas', 'Mover 1 píxel (Mayús: 1 tile)'],
-          ['[ y ]', 'Enviar atrás / traer adelante']
-        ]
-      ],
-      [
-        'Pixel art',
-        [
-          ['B', 'Lápiz'],
-          ['E', 'Borrador'],
-          ['G', 'Balde'],
-          ['I', 'Cuentagotas (o Alt + clic)'],
-          ['L', 'Línea'],
-          ['R', 'Rectángulo'],
-          ['O', 'Elipse'],
-          ['S', 'Selección'],
-          ['W', 'Varita'],
-          ['X', 'Intercambiar colores'],
-          ['[ y ]', 'Tamaño de la punta'],
-          [', y .', 'Cuadro anterior / siguiente']
-        ]
-      ]
-    ];
+    const id = CK.foco || CK.seccion_actual,
+      sec = CK.secciones[id];
+    // lo que tiene botón con atajo en la sección que se está usando
+    const vistos = new Set(),
+      propios = [];
+    if (sec && sec.el)
+      sec.el.querySelectorAll('[data-tecla]').forEach(b => {
+        const k = b.dataset.tecla,
+          t = b.dataset.tip;
+        if (!k || !t || vistos.has(k + t)) return;
+        vistos.add(k + t);
+        propios.push([k, t]);
+      });
+    const delaSeccion = propios.concat((ATAJOS_EXTRA[id] || []).filter(([k, t]) => !vistos.has(k + t)));
+    const grupos = [];
+    if (delaSeccion.length) grupos.push([(sec ? sec.nombre : 'Esta sección') + ' (donde estás)', delaSeccion]);
+    grupos.push(['En todo el editor', ATAJOS_EXTRA.general]);
+    const lista = h('div.atajos-lista');
+    const pintar = filtro => {
+      CK.vaciar(lista);
+      const f = (filtro || '').toLowerCase();
+      grupos.forEach(([t, l]) => {
+        const ls = l.filter(([k, d]) => !f || (k + ' ' + d).toLowerCase().includes(f));
+        if (!ls.length) return;
+        lista.append(
+          h('h3.bloque-tit', { style: { marginTop: '12px' } }, t),
+          h(
+            'table.tabla',
+            ls.map(([k, d]) => h('tr', h('td', { style: { width: '210px' } }, h('kbd', k)), h('td', d)))
+          )
+        );
+      });
+      if (!lista.children.length) lista.append(h('p.nota-txt', 'Ningún atajo coincide.'));
+    };
+    const buscar = h('input.in', { type: 'search', placeholder: 'Buscar un atajo…', oninput: e => pintar(e.target.value) });
+    pintar('');
     CK.ventana({
       titulo: 'Atajos de teclado',
-      ancho: 560,
+      ancho: 600,
       cuerpo: h(
         'div',
-        filas.map(([t, l]) =>
-          h(
-            'div',
-            h('h3.bloque-tit', { style: { marginTop: '10px' } }, t),
-            h(
-              'table.tabla',
-              l.map(([k, d]) => h('tr', h('td', { style: { width: '190px' } }, h('kbd', k)), h('td', d)))
-            )
-          )
+        buscar,
+        lista,
+        h(
+          'p.nota-txt',
+          { style: { marginTop: '12px' } },
+          'Las mismas letras hacen lo mismo en todas las secciones: B pincel o lápiz, E goma, G balde, V seleccionar o mover, I cuentagotas.'
         )
       )
     });
   };
 
   // ------------------------------------------------------------ teclado general
+  let resorte = null,
+    apretado = false,
+    volverLuego = null;
+  const RESORTE_MS = 280;
+  const volverA = r => {
+    if (r.sec.herrActual() !== r.antes) r.sec.volverHerr(r.antes);
+  };
+  document.addEventListener('keyup', e => {
+    const r = resorte;
+    if (!r || e.key.toLowerCase() !== r.k) return;
+    resorte = null;
+    if (performance.now() - r.t < RESORTE_MS) return; // un toque: se queda en la herramienta
+    if (apretado)
+      volverLuego = r; // si está arrastrando, vuelve al soltar el mouse
+    else volverA(r);
+  });
+  document.addEventListener('pointerdown', () => (apretado = true), true);
+  document.addEventListener(
+    'pointerup',
+    () => {
+      apretado = false;
+      if (volverLuego) {
+        const r = volverLuego;
+        volverLuego = null;
+        setTimeout(() => volverA(r), 0);
+      }
+    },
+    true
+  );
+  window.addEventListener('blur', () => {
+    resorte = null;
+  });
   document.addEventListener('keydown', e => {
     if (document.querySelector('.ven-fondo')) return;
     const enCampo =
@@ -960,6 +1130,11 @@
     if (e.key === 'F5') {
       e.preventDefault();
       CK.juego.probar();
+      return;
+    }
+    if (ctrl && k === 'k') {
+      e.preventDefault();
+      CK.buscador.abrir();
       return;
     }
     if (enCampo) return;
@@ -983,7 +1158,32 @@
       return;
     }
     const destino = CK.foco && CK.flotantes.has(CK.foco) ? CK.secciones[CK.foco] : actual;
-    if (destino && destino.tecla && destino.tecla(e, k, ctrl)) e.preventDefault();
+    // atajo de herramienta: tocarlo la deja puesta; mantenerlo apretado la usa un rato y al soltar vuelve a la de antes
+    if (!ctrl && !e.altKey && destino && destino.herrTecla) {
+      const id = destino.herrTecla(k);
+      if (id) {
+        if (e.repeat) {
+          e.preventDefault();
+          return;
+        }
+        const antes = destino.herrActual();
+        resorte = id !== antes ? { k, antes, t: performance.now(), sec: destino } : null;
+      }
+    }
+    if (destino && destino.tecla && destino.tecla(e, k, ctrl)) {
+      e.preventDefault();
+      return;
+    }
+    // + y − acercan o alejan la vista principal de cualquier sección que tenga una
+    if (!ctrl && destino && destino.el && (k === '+' || k === '=' || k === '-')) {
+      const v = (CK._vistas || [])
+        .filter(x => x.c.isConnected && destino.el.contains(x.c) && x.c.offsetParent)
+        .sort((a, b) => b.w * b.h - a.w * a.h)[0];
+      if (v) {
+        v.zoomEn(k === '-' ? -1 : 1);
+        e.preventDefault();
+      }
+    }
   });
 
   // ------------------------------------------------------------ arranque

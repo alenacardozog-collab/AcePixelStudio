@@ -20,6 +20,8 @@
     c1: '#1b1420',
     c2: '#f5f1e6',
     tam: 1,
+    trSuave: false, // transformar: RotSprite apagado de entrada (redondea las esquinas de los dibujos chicos)
+    trBorde: true, // transformar: al girar, el contorno de 1 píxel se vuelve a dibujar limpio
     perfecto: true,
     relleno: false,
     contiguo: true,
@@ -49,9 +51,16 @@
       tip: 'Lápiz',
       desc: 'Dibuja píxel a píxel con el color principal. Clic derecho usa el color secundario.',
       tecla: 'B',
-      est: 'Arrastrar: dibujar · Clic derecho: color secundario · Mayús + clic: línea recta desde el último punto · Alt + clic: tomar color'
+      est: 'Arrastrar: dibujar · Mayús: recta desde el último punto (arrastrá para estirarla, se pinta al soltar) · Mayús + Ctrl: pendientes limpias · Clic derecho: color secundario · Alt + clic: tomar color'
     },
-    { id: 'borrador', ico: 'borrador', tip: 'Borrador', desc: 'Deja los píxeles transparentes.', tecla: 'E', est: 'Arrastrar: borrar' },
+    {
+      id: 'borrador',
+      ico: 'borrador',
+      tip: 'Borrador',
+      desc: 'Deja los píxeles transparentes.',
+      tecla: 'E',
+      est: 'Arrastrar: borrar · Mayús: borrar en línea recta desde el último punto'
+    },
     {
       id: 'balde',
       ico: 'balde',
@@ -70,6 +79,7 @@
     },
     {
       id: 'sombrear',
+      avanzada: true,
       ico: 'linterna',
       tip: 'Aclarar / oscurecer',
       desc: 'Pasa cada píxel al tono vecino de la paleta: clic izquierdo aclara, clic derecho oscurece. Sombrea sin salirte del estilo.',
@@ -78,6 +88,7 @@
     },
     {
       id: 'reemplazar',
+      avanzada: true,
       ico: 'paleta',
       tip: 'Reemplazar color',
       desc: 'Clic sobre un color del dibujo y lo cambia por el color principal en todo el cuadro. Con Mayús, en todos los cuadros.',
@@ -116,16 +127,24 @@
       tip: 'Selección rectangular',
       desc: 'Marca un rectángulo. Lo que hagas después solo afecta ahí adentro.',
       tecla: 'S',
-      est: 'Arrastrar: seleccionar · Arrastrar adentro: mover · Mayús: sumar · Esc: soltar'
+      est: 'Arrastrar: seleccionar · Arrastrar adentro: mover · Asas: escalar · Asa azul: girar · Mayús: sumar · Enter: fijar · Esc: soltar'
     },
-    { id: 'lazo', ico: 'lazo', tip: 'Lazo', desc: 'Selección a mano alzada.', tecla: 'Q', est: 'Arrastrar: rodear la zona' },
+    {
+      id: 'lazo',
+      ico: 'lazo',
+      tip: 'Lazo',
+      desc: 'Selección a mano alzada.',
+      tecla: 'Q',
+      est: 'Arrastrar: rodear la zona · Asas de la selección: escalar · Asa azul: girar · Enter: fijar'
+    },
     {
       id: 'varita',
+      avanzada: true,
       ico: 'varita',
       tip: 'Varita',
       desc: 'Selecciona toda una zona del mismo color.',
       tecla: 'W',
-      est: 'Clic: seleccionar ese color · Mayús: sumar'
+      est: 'Clic: seleccionar ese color · Mayús: sumar · Asas: escalar · Asa azul: girar'
     },
     {
       id: 'mover',
@@ -133,7 +152,7 @@
       tip: 'Mover',
       desc: 'Mueve la selección, o toda la capa si no hay nada seleccionado.',
       tecla: 'V',
-      est: 'Arrastrar: mover · Flechas: de a 1 píxel'
+      est: 'Arrastrar: mover · Flechas: de a 1 píxel · Asas de la selección: escalar y girar'
     },
     {
       id: 'transformar',
@@ -141,7 +160,7 @@
       tip: 'Transformar',
       desc: 'Rota, escala y voltea lo seleccionado (o toda la capa) con manijas. Sirve con Selección, Lazo y Varita.',
       tecla: 'T',
-      est: 'Esquinas: escalar (Mayús: proporcional) · Bordes: estirar · Afuera o la manija de arriba: rotar (Mayús: de a 15°) · Adentro: mover · Enter: aplicar · Esc: cancelar · Clic derecho: más opciones'
+      est: 'Esquinas: escalar manteniendo la forma (Mayús: libre) · Bordes: estirar · Afuera o la manija de arriba: rotar (Mayús: de a 15°) · Adentro: mover · Enter: aplicar · Esc: cancelar · Clic derecho: más opciones'
     }
   ];
 
@@ -226,6 +245,7 @@
     if (!a) return;
     Px.soltarFlot();
     Px.S.id = id;
+    Px.S.ultimo = null; // la recta con Mayús no arranca desde un punto de otro dibujo
     Px.sel = null;
     Px.flot = null;
     const meta = CK.P.pixel[id],
@@ -313,25 +333,29 @@
   /** Deshacer de un cambio en los píxeles de la capa activa. */
   Px.cambioCapa = nombre => {
     const id = Px.S.id,
-      ci = Px.doc.activa,
-      antes = CK.copiaLienzo(Px.capa().c);
+      ci = Px.doc.activa;
+    let antes = CK.copiaLienzo(Px.capa().c);
     return () => {
-      const despues = CK.copiaLienzo(Px.doc.capas[ci].c);
-      const poner = src => {
+      // el deshacer guarda solo el rectángulo que cambió (un trazo chico ocupa poco, aunque la imagen sea grande)
+      const dif = CK.difLienzo(antes, Px.doc.capas[ci].c);
+      antes = null;
+      if (!dif) return Px.componer();
+      const poner = cual => {
         if (Px.S.id !== id || !Px.doc) Px.abrir(id);
         const k = Px.doc.capas[ci];
         if (!k) return;
-        if (k.c.width !== src.width || k.c.height !== src.height) {
+        if (dif.completo) {
+          const src = dif[cual];
           k.c.width = src.width;
           k.c.height = src.height;
-        }
-        const x = CK.ctx(k.c);
-        x.clearRect(0, 0, k.c.width, k.c.height);
-        x.drawImage(src, 0, 0);
+          const x = CK.ctx(k.c);
+          x.clearRect(0, 0, k.c.width, k.c.height);
+          x.drawImage(src, 0, 0);
+        } else CK.aplicarDif(k.c, dif, cual);
         Px.componer();
         Px.pedir();
       };
-      CK.hist.push({ nombre, deshacer: () => poner(antes), rehacer: () => poner(despues) });
+      CK.hist.push({ nombre, deshacer: () => poner('a'), rehacer: () => poner('d') });
       Px.componer();
     };
   };

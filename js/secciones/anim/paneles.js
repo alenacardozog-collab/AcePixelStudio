@@ -8,9 +8,43 @@
   const guardarGenerada = async () => {
     if (!An.st.frames.length) return;
     const b = CK.P.assets[An.st.base],
-      def = PIX.ANIMS[An.st.tipo],
-      nombre = await CK.pedir('Guardar animación', 'Nombre', b.nombre + '_' + An.st.tipo);
+      def = PIX.ANIMS[An.st.tipo];
+    let nombre = await CK.pedir('Guardar animación', 'Nombre', b.nombre + '_' + An.st.tipo);
     if (!nombre) return;
+    // ya hay una con ese nombre: sobrescribirla o guardar como copia
+    const ya = Object.values(CK.P.assets).find(x => x.nombre === nombre && x.cuadros && x.id !== b.id);
+    if (ya) {
+      const r = await CK.ventana({
+        titulo: 'Ya existe «' + nombre + '»',
+        cuerpo: h('p', 'Hay una animación con ese nombre. ¿La reemplazo con esta o guardo esta como copia?'),
+        botones: [
+          { txt: 'Cancelar', valor: null },
+          { txt: 'Guardar como copia', valor: 'copia' },
+          { txt: 'Sobrescribir', cls: 'pri', valor: 'sobre' }
+        ]
+      });
+      if (!r) return;
+      if (r === 'sobre') {
+        const fw = Math.max(...An.st.frames.map(f => f.w)),
+          fh = Math.max(...An.st.frames.map(f => f.h)),
+          fi = CK.hist.imagen('Sobrescribir animación', ya.id),
+          fd = CK.hist.datos('Sobrescribir animación', 'assets', ya.id);
+        CK.asset.poner(ya.id, CK.aLienzo(PIX.pack(An.st.frames, An.st.frames.length)));
+        ya.cuadros = Object.assign({}, ya.cuadros, { fw, fh, fps: An.st.fps });
+        ya.modificado = Date.now();
+        fi();
+        fd();
+        CK.emit('assets', ya.id);
+        CK.aviso('Animación sobrescrita: ' + nombre, 'ok');
+        An.st.hoja = ya.id;
+        An.tabs.ir('hoja');
+        An.pintarIzq();
+        return;
+      }
+      let k = 2;
+      while (Object.values(CK.P.assets).some(x => x.nombre === nombre + ' (' + k + ')')) k++;
+      nombre = nombre + ' (' + k + ')';
+    }
     const fw = Math.max(...An.st.frames.map(f => f.w)),
       fh = Math.max(...An.st.frames.map(f => f.h));
     const a = CK.asset.crear({
@@ -607,6 +641,8 @@
         'Los brillos y sombras de la animación toman tonos vecinos de tu paleta, sin inventar colores.'
       )
     );
+    const fino = CK.plegar(bl, ['Ondas', 'Lado fijo', 'Ancho del brillo', 'Usar solo colores de la paleta']);
+    if (fino) fino.parentElement.classList.remove('bloque');
     c.append(
       bl,
       h(
@@ -636,6 +672,8 @@
       An.pintarCentro();
       return;
     }
+    // foto de cómo estaba al abrirla: para "Guardar" (sobrescribir o como copia)
+    if (!An.fotoHoja || An.fotoHoja.id !== a.id) An.fotoHoja = { id: a.id, foto: CK.edicion.foto('assets', a.id) };
     const k = a.cuadros,
       n = CK.asset.nCuadros(a),
       re = () => {
@@ -647,6 +685,26 @@
       h(
         'div.bloque',
         h('h3.bloque-tit', a.nombre),
+        h('p.nota-txt', CK.asset.info(a)),
+        h(
+          'div.fila',
+          { style: { margin: '4px 0 8px' } },
+          CK.btn({
+            ico: 'guardar',
+            txt: 'Guardar…',
+            cls: 'chico pri',
+            desc: 'Guarda los cambios de esta animación: te pregunta si sobrescribir la original o guardar una copia.',
+            on: async () => {
+              const id = await CK.edicion.guardarAsset(a.id, An.fotoHoja && An.fotoHoja.foto);
+              if (!id) return;
+              An.st.hoja = id;
+              An.fotoHoja = { id, foto: CK.edicion.foto('assets', id) };
+              An.cacheKey = '';
+              An.tabs.refrescar();
+              An.pintarIzq();
+            }
+          })
+        ),
         h(
           'div.duo',
           h(

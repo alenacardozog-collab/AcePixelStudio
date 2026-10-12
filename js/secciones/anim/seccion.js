@@ -14,6 +14,34 @@
     const tablero = h('div.tablero', An.vistaCv, An.sobreVista);
     An.vista = CK.vista(An.vistaCv, { pintar: An.pintarVista, herramienta: An.herramientaVista, zoom: 4 });
     tablero.append(h('div.sobre.abajo.der', CK.tiraZoom(An.vista, An.encuadre)));
+    // Info del asset: abajo a la izquierda, encima de la línea de tiempo
+    tablero.append(
+      h(
+        'div.sobre.abajo',
+        h(
+          'div.tira',
+          CK.btn({
+            ico: 'info',
+            txt: 'Info del asset',
+            cls: 'chico plano',
+            desc: 'Nombre, tipo, tamaño, cuadros, carpeta, fechas y en qué mapas se usa.',
+            on: () => {
+              const a = CK.P.assets[An.st.modo === 'hoja' ? An.st.hoja : An.st.base];
+              if (a) CK.ventana({ titulo: a.nombre, cuerpo: CK.asset.ficha(a) });
+              else CK.aviso('Primero abrí una animación o elegí un dibujo.', 'info');
+            }
+          })
+        )
+      )
+    );
+    An.vacio = CK.vacioSobre(
+      tablero,
+      'anim',
+      'Elegí qué animar',
+      'Para mover algo quieto (bandera, árbol, antorcha) elegilo en Generar. Para ordenar una animación que ya tenés, abrila en Hoja o importá una tira de sprites.',
+      CK.btn({ ico: 'imagen', txt: 'Elegir un dibujo', cls: 'pri', on: () => An.tabs.ir('generar') }),
+      CK.btn({ ico: 'importar', txt: 'Importar tira', on: () => An.tabs.ir('hoja') })
+    );
     An.vistaCv.addEventListener('contextmenu', An.menuVista);
     An.cajaRep = h('div', { style: { position: 'relative', display: 'grid', minHeight: 0, overflow: 'hidden' } }, tablero);
     An.lineaEl = h('div.tl', {});

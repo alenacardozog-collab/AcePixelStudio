@@ -353,6 +353,7 @@ CK.herramientas = (items, actual, alElegir, o = {}) => {
       }
     });
     if (o.rotulos) b.append(CK.h('span.herr-rot', it.corto || it.tip));
+    if (it.avanzada) b.classList.add('avanzado'); // en modo simple no se ve
     btns[it.id] = b;
     cont.append(b);
   });
@@ -381,15 +382,29 @@ CK.num = (v, o, on) => {
   });
   return i;
 };
+let nLista = 0;
 CK.rango = (v, o, on) => {
   const out = CK.h('span.rango-val', String(v)),
     i = CK.h('input.rango', { type: 'range', value: v, min: o.min, max: o.max, step: o.step || 1 });
+  // o.comun: valor habitual, marcado con una rayita en el control (y doble clic vuelve a él)
+  let lista = null;
+  if (o.comun !== undefined && o.comun >= o.min && o.comun <= o.max) {
+    const id = 'ck-comun-' + ++nLista;
+    lista = CK.h('datalist', { id }, CK.h('option', { value: o.comun }));
+    i.setAttribute('list', id);
+    i.addEventListener('dblclick', () => {
+      i.value = o.comun;
+      out.textContent = String(o.comun);
+      on(parseFloat(o.comun), true);
+    });
+    i.title = 'Habitual: ' + o.comun + ' (doble clic para volver)';
+  }
   i.addEventListener('input', () => {
     out.textContent = i.value;
     on(parseFloat(i.value), false);
   });
   i.addEventListener('change', () => on(parseFloat(i.value), true));
-  const w = CK.h('span.rango-caja', i, out);
+  const w = CK.h('span.rango-caja', i, out, lista);
   w.poner = n => {
     i.value = n;
     out.textContent = String(n);
@@ -431,6 +446,18 @@ CK.color = (v, on) => {
   return i;
 };
 CK.seccion = (titulo, ...kids) => CK.h('section.bloque', CK.h('h3.bloque-tit', titulo), ...kids);
+/** Pantalla vacía que enseña, encima de un lienzo o área (cont necesita position relative). Devuelve ver(true|false). */
+CK.vacioSobre = (cont, ico, titulo, texto, ...botones) => {
+  const caja = CK.h(
+    'div.vacio-sobre',
+    CK.vacio(ico, titulo, texto, botones.length ? CK.h('div.fila', { style: { justifyContent: 'center' } }, ...botones) : null)
+  );
+  caja.style.display = 'none';
+  cont.append(caja);
+  return si => {
+    caja.style.display = si ? '' : 'none';
+  };
+};
 CK.vacio = (ico, titulo, texto, accion) =>
   CK.h('div.vacio', { html: CK.ico(ico, 34) }, CK.h('div.vacio-tit', titulo), CK.h('div.vacio-txt', texto), accion || null);
 

@@ -18,6 +18,7 @@ CK.proyectoVacio = nombre => ({
   estilo: {
     tile: 16,
     personaje: [100, 100],
+    altoHeroe: 30,
     escalaVista: 3,
     perspectiva: 'Top-down 3/4',
     luz: 'arriba-izquierda',
@@ -54,6 +55,7 @@ CK.proyectoVacio = nombre => ({
   assets: {},
   mapas: {},
   prefabs: {},
+  luces: {},
   fx: {},
   npcs: {},
   misiones: [],
@@ -152,6 +154,77 @@ CK.tocar = () => {
 };
 
 // ---------------------------------------------------------------- deshacer / rehacer
+/** Diferencia entre dos lienzos: solo el rectángulo que cambió (antes y después). null si son iguales. */
+CK.difLienzo = (a, b) => {
+  if (!a || !b) return null;
+  if (a.width !== b.width || a.height !== b.height) return { completo: true, a: CK.copiaLienzo(a), d: CK.copiaLienzo(b) };
+  const W = a.width,
+    H = a.height;
+  if (!W || !H) return null;
+  const da = CK.ctx(a).getImageData(0, 0, W, H).data,
+    db = CK.ctx(b).getImageData(0, 0, W, H).data,
+    ua = new Uint32Array(da.buffer, da.byteOffset, W * H),
+    ub = new Uint32Array(db.buffer, db.byteOffset, W * H);
+  let x0 = W,
+    y0 = H,
+    x1 = -1,
+    y1 = -1;
+  for (let y = 0; y < H; y++) {
+    const f = y * W;
+    for (let x = 0; x < W; x++)
+      if (ua[f + x] !== ub[f + x]) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        y1 = y;
+      }
+  }
+  if (x1 < 0) return null;
+  const w = x1 - x0 + 1,
+    h = y1 - y0 + 1;
+  return { x: x0, y: y0, w, h, a: CK.ctx(a).getImageData(x0, y0, w, h), d: CK.ctx(b).getImageData(x0, y0, w, h) };
+};
+/** Pone en el lienzo el estado 'a' (antes) o 'd' (después) de una diferencia. Devuelve el lienzo (puede ser otro si cambió el tamaño). */
+CK.aplicarDif = (c, dif, cual) => {
+  if (!dif) return c;
+  if (dif.completo) return CK.copiaLienzo(dif[cual]);
+  CK.ctx(c).putImageData(dif[cual], dif.x, dif.y);
+  return c;
+};
+/**
+ * Vuelve un objeto a otro estado sin reemplazarlo: conserva el mismo objeto (y los objetos de adentro que tengan
+ * el mismo id), así lo que el editor tenga abierto sigue apuntando a lo correcto después de deshacer.
+ */
+const esPlano = v => v && typeof v === 'object' && !Array.isArray(v);
+CK.reconciliar = (dst, src) => {
+  Object.keys(dst).forEach(k => {
+    if (!(k in src)) delete dst[k];
+  });
+  Object.keys(src).forEach(k => {
+    const a = dst[k],
+      b = src[k];
+    if (esPlano(a) && esPlano(b)) CK.reconciliar(a, b);
+    else if (Array.isArray(a) && Array.isArray(b)) {
+      const porId = new Map();
+      a.forEach(e => esPlano(e) && e.id !== undefined && porId.set(e.id, e));
+      const nuevo = b.map((e, i) => {
+        if (esPlano(e) && e.id !== undefined && porId.has(e.id)) return CK.reconciliar(porId.get(e.id), e);
+        if (esPlano(e) && esPlano(a[i]) && e.id === undefined && a[i].id === undefined) return CK.reconciliar(a[i], e);
+        return e;
+      });
+      a.length = 0;
+      nuevo.forEach(e => a.push(e));
+    } else dst[k] = b;
+  });
+  return dst;
+};
+const textos = new Map(); // último texto de cada parte del proyecto: pasos seguidos comparten la misma copia
+const compartido = (k, s) => {
+  const v = textos.get(k);
+  if (v === s) return v;
+  textos.set(k, s);
+  return s;
+};
 CK.hist = {
   pila: [],
   pos: 0,
@@ -190,13 +263,16 @@ CK.hist = {
   },
   /** Envuelve un cambio sobre una parte del proyecto (clave de primer nivel + id): toma el antes y, al llamar fin(), el después. */
   datos(nombre, grupo, id) {
-    const antes = JSON.stringify(CK.P[grupo][id]);
+    const clave = grupo + '/' + id,
+      antes = compartido(clave, JSON.stringify(CK.P[grupo][id]));
     return () => {
-      const despues = JSON.stringify(CK.P[grupo][id]);
+      const despues = compartido(clave, JSON.stringify(CK.P[grupo][id]));
       if (antes === despues) return false;
       const poner = s => {
         if (s === undefined) delete CK.P[grupo][id];
+        else if (esPlano(CK.P[grupo][id]) && s[0] === '{') CK.reconciliar(CK.P[grupo][id], JSON.parse(s));
         else CK.P[grupo][id] = JSON.parse(s);
+        textos.set(clave, s);
         CK.emit('datos', grupo, id);
       };
       this.push({ nombre, deshacer: () => poner(antes), rehacer: () => poner(despues) });
@@ -205,14 +281,14 @@ CK.hist = {
   },
   /** Igual pero para la imagen de un asset. */
   imagen(nombre, id) {
-    const antes = CK.copiaLienzo(CK.img[id]);
+    let antes = CK.copiaLienzo(CK.img[id]);
     return () => {
-      const despues = CK.copiaLienzo(CK.img[id]);
-      this.push({
-        nombre,
-        deshacer: () => CK.asset.poner(id, CK.copiaLienzo(antes)),
-        rehacer: () => CK.asset.poner(id, CK.copiaLienzo(despues))
-      });
+      // solo se guarda el rectángulo que cambió
+      const dif = CK.difLienzo(antes, CK.img[id]);
+      antes = null;
+      if (!dif) return;
+      const poner = cual => CK.asset.poner(id, CK.aplicarDif(CK.copiaLienzo(CK.img[id]), dif, cual));
+      this.push({ nombre, deshacer: () => poner('a'), rehacer: () => poner('d') });
     };
   }
 };
@@ -387,6 +463,7 @@ CK.guardar = async (o = {}) => {
         todas = !(await CK.fs.texto(dir, base + '/proyecto.json'));
       const ids = todas || o.todo ? Object.keys(CK.P.assets) : sucias;
       for (const id of ids) if (CK.img[id]) await CK.fs.escribir(dir, base + '/assets/' + id + '.png', await CK.aBlob(CK.img[id]));
+      CK._ultimaEscritura = Date.now();
       for (const id of borradas) await CK.fs.borrar(dir, base + '/assets/' + id + '.png');
       await CK.fs.escribir(dir, base + '/proyecto.json', json);
       if (o.version) {
@@ -403,6 +480,7 @@ CK.guardar = async (o = {}) => {
       await CK.db.set('ajustes', 'versiones_' + slug, vs);
       CK.aviso('Versión guardada en el navegador');
     }
+    CK._aplicado = json; // lo último aplicado: "Descartar" vuelve acá
     CK.emit('sucio', false);
     CK.emit('guardado', enDisco);
     if (!o.silencio)
@@ -426,7 +504,7 @@ CK._poner = async (P, cargarImg) => {
   CK.P = Object.assign(base, P);
   CK.P.estilo = Object.assign(base.estilo, P.estilo || {});
   CK.P.juego = Object.assign(base.juego, P.juego || {});
-  ['assets', 'mapas', 'prefabs', 'fx', 'npcs', 'pixel'].forEach(k => {
+  ['assets', 'mapas', 'prefabs', 'luces', 'fx', 'npcs', 'pixel'].forEach(k => {
     CK.P[k] = CK.P[k] || {};
   });
   CK.P.notas = CK.P.notas || [];
@@ -438,8 +516,11 @@ CK._poner = async (P, cargarImg) => {
   CK._borradas = [];
   CK._sucio = false;
   CK.hist.limpiar();
-  const faltan = [];
-  for (const id of Object.keys(CK.P.assets)) {
+  const faltan = [],
+    ids = Object.keys(CK.P.assets);
+  // proyectos pesados: las imágenes se leen de a varias a la vez, con el avance en la barra de abajo
+  let hechas = 0;
+  const una = async id => {
     let c = null;
     try {
       c = await cargarImg(id);
@@ -451,7 +532,16 @@ CK._poner = async (P, cargarImg) => {
     CK.img[id] = c;
     CK.P.assets[id].w = c.width;
     CK.P.assets[id].h = c.height;
-  }
+    hechas++;
+    if (ids.length > 40 && hechas % 20 === 0 && CK.estado) CK.estado('Cargando imágenes… ' + hechas + ' de ' + ids.length);
+  };
+  const cola = ids.slice();
+  await Promise.all(
+    [...Array(Math.min(8, cola.length))].map(async () => {
+      while (cola.length) await una(cola.shift());
+    })
+  );
+  if (ids.length > 40 && CK.estado) CK.estado(ids.length + ' imágenes cargadas');
   if (faltan.length)
     CK.aviso('Faltan ' + faltan.length + ' imágenes (' + faltan.slice(0, 3).join(', ') + '…). Aparecen vacías.', 'error', 6000);
   CK.emit('proyecto');
@@ -519,6 +609,7 @@ CK.abrir = async (slug, forzar) => {
     if (dir && !disco) Object.keys(CK.img).forEach(id => CK._imgSucias.add(id));
   }
   await CK.db.set('ajustes', 'ultimo', slug);
+  CK._aplicado = JSON.stringify(CK.P, null, 1); // lo recién abierto es lo "aplicado"
   CK.aviso('Abierto: ' + CK.P.nombre + (usarDisco ? ' (desde la carpeta)' : ''));
   return true;
 };
@@ -569,22 +660,23 @@ CK.volverA = async json => {
   CK.emit('proyecto');
 };
 
-// autoguardado
+// autoguardado (solo si no está prendido "Preguntar antes de aplicar cambios": ahí se guarda únicamente al aplicar)
+const autoguardar = () => !(CK.aplicar && CK.aplicar.prendido());
 setInterval(() => {
-  if (CK.P && CK._sucio && !CK._ocupado)
+  if (CK.P && CK._sucio && !CK._ocupado && autoguardar())
     CK.guardar({ silencio: true }).then(
       ok => ok && CK.estadoDer('Autoguardado ' + new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }))
     );
 }, 60000);
 window.addEventListener('beforeunload', e => {
-  if (CK.P && CK._sucio) {
+  if (CK.P && CK._sucio && autoguardar()) {
     CK.guardar({ silencio: true });
     e.preventDefault();
     e.returnValue = '';
   }
 });
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && CK.P && CK._sucio) CK.guardar({ silencio: true });
+  if (document.hidden && CK.P && CK._sucio && autoguardar()) CK.guardar({ silencio: true });
 });
 
 /** Elimina un proyecto guardado (del navegador y de la carpeta del editor). Pregunta antes y ofrece bajar una copia. */

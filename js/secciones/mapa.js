@@ -230,6 +230,86 @@
       h = f.h * Math.abs(o.sy || 1);
     return { x: o.x - w / 2, y: o.y - h, w, h };
   };
+  // ---------------------------------------------------------------- colisiones ancladas a un objeto
+  // Una colisión del mapa puede tener ancla = id de un objeto y su posición relativa (ox, oy, ow, oh, sin escala):
+  // se mueve, escala, espeja y gira (su centro) con el objeto. x, y, w, h se recalculan siempre desde el objeto.
+  const objEnMapa = (m, id) => objetosDe(m, true).find(o => o.id === id) || null;
+  const anclaPos = (k, o) => {
+    const sx = Math.abs(o.sx || 1),
+      sy = Math.abs(o.sy || 1),
+      w = k.ow * sx,
+      h = k.oh * sy;
+    let cx = o.flipX ? -(k.ox + k.ow) * sx : k.ox * sx,
+      mx = cx + w / 2,
+      my = k.oy * sy + h / 2;
+    if (o.rot) {
+      const r = (o.rot * Math.PI) / 180,
+        c = Math.cos(r),
+        s = Math.sin(r);
+      [mx, my] = [mx * c - my * s, mx * s + my * c];
+    }
+    return { x: o.x + mx - w / 2, y: o.y + my - h / 2, w, h };
+  };
+  /** Pone la colisión anclada al objeto o (calcula su posición relativa desde donde está ahora). */
+  const anclarCol = (k, o) => {
+    const sx = Math.abs(o.sx || 1),
+      sy = Math.abs(o.sy || 1);
+    let mx = k.x + k.w / 2 - o.x,
+      my = k.y + k.h / 2 - o.y;
+    if (o.rot) {
+      const r = (-o.rot * Math.PI) / 180,
+        c = Math.cos(r),
+        s = Math.sin(r);
+      [mx, my] = [mx * c - my * s, mx * s + my * c];
+    }
+    const ow = k.w / sx,
+      oh = k.h / sy,
+      cx = mx - k.w / 2;
+    k.ancla = o.id;
+    k.ow = +ow.toFixed(3);
+    k.oh = +oh.toFixed(3);
+    k.ox = +(o.flipX ? -cx / sx - ow : cx / sx).toFixed(3);
+    k.oy = +((my - k.h / 2) / sy).toFixed(3);
+  };
+  const desanclarCol = k => {
+    ['ancla', 'ox', 'oy', 'ow', 'oh', 'huerfana'].forEach(c => delete k[c]);
+  };
+  /** Recalcula x, y, w, h de las colisiones ancladas (se llama al dibujar y al exportar). */
+  const sincronizarCols = m => {
+    (m.colisiones || []).forEach(k => {
+      if (!k.ancla) return;
+      const o = objEnMapa(m, k.ancla);
+      if (!o) {
+        k.huerfana = true;
+        return;
+      }
+      delete k.huerfana;
+      Object.assign(k, anclaPos(k, o));
+    });
+  };
+  /** Después de mover o estirar a mano una colisión anclada: guarda su nueva posición relativa. */
+  const reanclar = k => {
+    if (!k.ancla) return;
+    const o = objEnMapa(M(), k.ancla);
+    if (o) anclarCol(k, o);
+  };
+  /** El objeto que está debajo de un punto (por su caja), para anclar ahí una colisión nueva. */
+  const objetoDebajo = (m, wx, wy) => {
+    const l = objetosDe(m).filter(o => !o.tipo && !o.oculto);
+    for (let i = l.length - 1; i >= 0; i--) {
+      const b = cajaDe(l[i]);
+      if (wx >= b.x && wx <= b.x + b.w && wy >= b.y && wy <= b.y + b.h) return l[i];
+    }
+    return null;
+  };
+  S.colAnclar = (() => {
+    try {
+      return localStorage.getItem('ck_col_anclar') !== '0';
+    } catch (e) {
+      return true;
+    }
+  })();
+
   /** Colisión de un objeto en coordenadas del mundo. */
   const colDe = o => {
     if (!o.col) return null;
@@ -317,29 +397,41 @@
       r.lienzo = CK.lienzo(m.w, m.h);
       r.sucio = true;
     }
-    if (!r.sucio) return r.lienzo;
+    if (!r.sucio && !r.zona) return r.lienzo;
+    // si solo cambiaron unas celdas (pincel), se redibuja ese rectángulo y no la capa entera
+    const z = !r.sucio && r.zona ? r.zona : null;
     r.sucio = false;
+    r.zona = null;
     const x = CK.ctx(r.lienzo);
-    x.clearRect(0, 0, m.w, m.h);
+    const ci0 = z ? Math.max(0, z.i0) : 0,
+      cj0 = z ? Math.max(0, z.j0) : 0,
+      ci1 = z ? Math.min(r.gw - 1, z.i1) : r.gw - 1,
+      cj1 = z ? Math.min(r.gh - 1, z.j1) : r.gh - 1;
+    if (z) x.clearRect(ci0 * T, cj0 * T, (ci1 - ci0 + 1) * T, (cj1 - cj0 + 1) * T);
+    else x.clearRect(0, 0, m.w, m.h);
     if (!img) return r.lienzo;
     const st = (a.tileset && a.tileset.tile) || T,
       cols = Math.max(1, Math.floor(a.w / st));
     if (c.tipo === 'terreno') {
       const filas = Math.floor(a.h / st),
         nVar = a.tileset && a.tileset.variantes !== undefined ? a.tileset.variantes : filas > 4 ? (filas - 4) * cols : 0;
-      for (let j = 0; j < r.gh - 1; j++)
-        for (let i = 0; i < r.gw - 1; i++) {
+      for (let j = cj0; j < Math.min(r.gh - 1, cj1 + 1); j++)
+        for (let i = ci0; i < Math.min(r.gw - 1, ci1 + 1); i++) {
           let p = piezaTerreno(m, c, r, i, j);
           if (p === 15) continue;
           if (p === 0 && nVar) {
-            const v = Math.floor((((i * 73856093) ^ (j * 19349663)) >>> 0) % (nVar + 1));
+            // continuo: las variantes son los 16 pedazos de una textura de 4 × 4 tiles y se ponen en orden (la textura se ve entera)
+            const v =
+              a.tileset.continuo && nVar >= 16
+                ? 1 + (i % 4) + (j % 4) * 4
+                : Math.floor((((i * 73856093) ^ (j * 19349663)) >>> 0) % (nVar + 1));
             if (v) p = 15 + v;
           }
           x.drawImage(img, (p % cols) * st, Math.floor(p / cols) * st, st, st, i * T, j * T, T, T);
         }
     } else
-      for (let j = 0; j < r.gh; j++)
-        for (let i = 0; i < r.gw; i++) {
+      for (let j = cj0; j <= cj1; j++)
+        for (let i = ci0; i <= ci1; i++) {
           const v = r.arr[j * r.gw + i];
           if (!(v & TXF.idx)) continue;
           dibujarPieza(x, img, v, cols, st, i * T, j * T, T);
@@ -355,9 +447,87 @@
     if (!sombras[k]) sombras[k] = CK.aLienzo(PIX.shadow(w, hh, '#000000', 84));
     x.drawImage(sombras[k], Math.round(o.x - w / 2), Math.round(o.y - hh * 0.62));
   };
+  // ---------------------------------------------------------------- giro y escala limpios (sin deformar el pixel art)
+  const entero = v => Math.abs(v - Math.round(v)) < 1e-6 && v >= 1;
+  const girado = o => (((o.rot || 0) % 360) + 360) % 360;
+  /** En el editor: el giro que no es recto o la escala que no es entera se dibujan con RotSprite (cacheado). */
+  const pideLimpio = o => girado(o) % 90 !== 0 || !entero(Math.abs(o.sx || 1)) || !entero(Math.abs(o.sy || 1));
+  /** Para el juego: todo lo que el juego no sabe hacer solo (girar, escalar distinto en X e Y, espejar vertical, escala no entera). */
+  const pideHorneado = o => girado(o) !== 0 || Math.abs(o.sx || 1) !== Math.abs(o.sy || 1) || !!o.flipY || !entero(Math.abs(o.sx || 1));
+  const fuentes = new Map(),
+    limpios = new Map();
+  /** El cuadro f del asset, ya espejado, como imagen de PIX (se reutiliza: así la versión ×8 también queda guardada). */
+  const fuenteDe = (a, f, fx, fy) => {
+    const k = a.id + ':' + (a.modificado || 0) + ':' + f.x + ',' + f.y + ',' + f.w + ',' + f.h + ':' + fx + fy;
+    let im = fuentes.get(k);
+    if (!im) {
+      const c = CK.lienzo(f.w, f.h),
+        x = CK.ctx(c);
+      x.translate(fx ? f.w : 0, fy ? f.h : 0);
+      x.scale(fx ? -1 : 1, fy ? -1 : 1);
+      x.drawImage(CK.img[a.id], f.x, f.y, f.w, f.h, 0, 0, f.w, f.h);
+      im = CK.aPix(c);
+      if (fuentes.size > 400) fuentes.clear();
+      fuentes.set(k, im);
+    }
+    return im;
+  };
+  /** Un cuadro del objeto girado y escalado limpio. Devuelve { c (lienzo), ax, ay (dónde queda el pie) }. */
+  const cuadroLimpio = (o, a, f) => {
+    const fx = !!o.flipX !== (o.sx || 1) < 0,
+      fy = !!o.flipY !== (o.sy || 1) < 0,
+      sx = Math.abs(o.sx || 1),
+      sy = Math.abs(o.sy || 1),
+      oy = (a.cuadros && a.cuadros.oy) || 0,
+      k = a.id + ':' + (a.modificado || 0) + ':' + f.x + ',' + f.y + ':' + girado(o) + ':' + sx + ':' + sy + ':' + fx + fy;
+    let r = limpios.get(k);
+    if (!r) {
+      const src = fuenteDe(a, f, fx, fy),
+        t = PIX.transformar(src, (girado(o) * Math.PI) / 180, sx, sy, Math.round(f.w / 2), fy ? oy : f.h - oy);
+      r = { c: CK.aLienzo(t.im), ax: t.ax, ay: t.ay };
+      if (limpios.size > 300) limpios.clear();
+      limpios.set(k, r);
+    }
+    return r;
+  };
+  /**
+   * Para exportar: todos los cuadros del objeto horneados con su giro, escala y espejo, alineados por el pie.
+   * Devuelve { c (hoja), fw, fh, n, ox, oy (punto de apoyo como fracción del cuadro) }.
+   */
+  const hornearObjeto = o => {
+    const a = CK.P.assets[o.asset];
+    if (!a || !CK.img[a.id]) return null;
+    const n = a.cuadros ? CK.asset.nCuadros(a) : 1,
+      rs = [];
+    for (let i = 0; i < n; i++) rs.push(cuadroLimpio(o, a, CK.asset.cuadro(a, i)));
+    const AX = Math.ceil(Math.max(...rs.map(r => r.ax))),
+      AY = Math.ceil(Math.max(...rs.map(r => r.ay))),
+      fw = Math.max(1, Math.ceil(Math.max(...rs.map(r => AX - r.ax + r.c.width)))),
+      fh = Math.max(1, Math.ceil(Math.max(...rs.map(r => AY - r.ay + r.c.height)))),
+      c = CK.lienzo(fw * n, fh),
+      x = CK.ctx(c);
+    rs.forEach((r, i) => x.drawImage(r.c, Math.round(i * fw + AX - r.ax), Math.round(AY - r.ay)));
+    return { c, fw, fh, n, ox: AX / fw, oy: AY / fh };
+  };
+
   const dibujarObj = (x, o, alpha) => {
     const img = CK.img[o.asset],
       f = frameDe(o);
+    // giro o escala que deformarían el dibujo: versión limpia (mientras se arrastra el asa, la rápida)
+    const a0 = CK.P.assets[o.asset];
+    if (
+      img &&
+      a0 &&
+      pideLimpio(o) &&
+      !(arrastre && (arrastre.tipo === 'rotar' || arrastre.tipo === 'escalar') && arrastre.o0.id === o.id)
+    ) {
+      const r = cuadroLimpio(o, a0, f);
+      x.save();
+      x.globalAlpha = (o.alpha === undefined ? 1 : o.alpha) * (alpha === undefined ? 1 : alpha);
+      x.drawImage(r.c, Math.round(o.x - r.ax), Math.round(o.y - r.ay));
+      x.restore();
+      return;
+    }
     x.save();
     x.translate(o.x, o.y);
     if (o.rot) x.rotate((o.rot * Math.PI) / 180);
@@ -456,39 +626,45 @@
       x.fillRect(0, 0, m.w, m.h);
       x.restore();
     }
-    x.save();
-    x.globalCompositeOperation = 'lighter';
+    const heroe = S.caminar && S.id === m.id ? S.caminar : null;
     objetosDe(m, true).forEach(o => {
       if (o.tipo !== 'luz' || o.oculto) return;
-      const par = o.parpadeo ? 1 + Math.sin(tiempo / 90 + o.x) * 0.06 * o.parpadeo + Math.sin(tiempo / 37 + o.y) * 0.04 * o.parpadeo : 1,
-        r = o.radio * par;
-      const g = x.createRadialGradient(o.x, o.y, 0, o.x, o.y, r),
-        c = PIX.hex2rgb(o.color || '#ffcc66'),
-        f = o.fuerza === undefined ? 0.6 : o.fuerza;
-      g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${f})`);
-      g.addColorStop(0.5, `rgba(${c[0]},${c[1]},${c[2]},${f * 0.35})`);
-      g.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
-      x.fillStyle = g;
-      x.fillRect(o.x - r, o.y - r, r * 2, r * 2);
+      // "sigue al héroe": al caminar por el mapa en el editor la luz va con él
+      if (o.sigue === 'heroe' && heroe) CK.luces.dibujarMapa(x, o, tiempo, heroe.x, heroe.y - 8);
+      else CK.luces.dibujarMapa(x, o, tiempo);
     });
-    x.restore();
   };
 
   // ---------------------------------------------------------------- pintar la vista
   const pintar = (x, v) => {
     const m = M();
     if (!m) return;
+    sincronizarCols(m);
     x.save();
     v.mundo(x);
     x.fillStyle = m.colorFondo || '#2f4a2c';
     x.fillRect(0, 0, m.w, m.h);
     if (m.fondo && CK.img[m.fondo] && S.ver.fondo) x.drawImage(CK.img[m.fondo], 0, 0);
     const heroe = S.caminar;
+    // solo se dibuja lo que se ve (mapas grandes)
+    const vx0 = Math.max(0, Math.floor(-v.tx / v.z) - 2),
+      vy0 = Math.max(0, Math.floor(-v.ty / v.z) - 2),
+      vx1 = Math.min(m.w, Math.ceil((v.w - v.tx) / v.z) + 2),
+      vy1 = Math.min(m.h, Math.ceil((v.h - v.ty) / v.z) + 2),
+      visible = o => {
+        const a = CK.P.assets[o.asset];
+        if (!a) return true;
+        const k = Math.max(Math.abs(o.sx || 1), Math.abs(o.sy || 1)) * (o.rot ? 1.5 : 1),
+          w = (a.cuadros ? a.cuadros.fw : a.w) * k,
+          hh = (a.cuadros ? a.cuadros.fh : a.h) * k;
+        return !(o.x + w / 2 < vx0 || o.x - w / 2 > vx1 || o.y + 8 < vy0 || o.y - hh > vy1);
+      };
     m.capas.forEach(c => {
       if (!c.visible) return;
       if (c.tipo !== 'objetos') {
         x.globalAlpha = c.opacidad;
-        x.drawImage(dibujarCapaTiles(m, c), 0, 0);
+        const lz = dibujarCapaTiles(m, c);
+        if (vx1 > vx0 && vy1 > vy0) x.drawImage(lz, vx0, vy0, vx1 - vx0, vy1 - vy0, vx0, vy0, vx1 - vx0, vy1 - vy0);
         x.globalAlpha = 1;
         return;
       }
@@ -497,6 +673,7 @@
         l = l.concat([{ _heroe: true, y: heroe.y, z: 0 }]);
         if (c.orden === 'y') l.sort((a, b) => a.y + (a.z || 0) - (b.y + (b.z || 0)));
       }
+      l = l.filter(o => o._heroe || o.tipo || visible(o));
       l.forEach(o => {
         if (!o._heroe && !o.oculto && !o.tipo && o.sombra) dibujarSombra(x, o);
       });
@@ -524,8 +701,12 @@
         zc = m.zonas.celda,
         zw = m.zonas.w,
         fuerte = S.herr === 'zona' || S.herr === 'balde-zona';
-      for (let j = 0; j < m.zonas.h; j++)
-        for (let i = 0; i < zw; i++) {
+      const zj0 = Math.max(0, Math.floor(vy0 / zc)),
+        zj1 = Math.min(m.zonas.h, Math.ceil(vy1 / zc)),
+        zi0 = Math.max(0, Math.floor(vx0 / zc)),
+        zi1 = Math.min(zw, Math.ceil(vx1 / zc));
+      for (let j = zj0; j < zj1; j++)
+        for (let i = zi0; i < zi1; i++) {
           const val = zr.arr[j * zw + i];
           if (!val) continue;
           const p = P(i * zc, j * zc);
@@ -541,8 +722,28 @@
           sel = k.id === S.selCol;
         x.fillStyle = sel ? 'rgba(232,100,79,.45)' : 'rgba(232,100,79,.22)';
         x.strokeStyle = sel ? '#fff' : '#e8644f';
+        if (k.ancla) x.setLineDash(k.huerfana ? [2, 3] : []);
         x.fillRect(p.x, p.y, k.w * z, k.h * z);
         x.strokeRect(p.x + 0.5, p.y + 0.5, k.w * z - 1, k.h * z - 1);
+        x.setLineDash([]);
+        if (k.ancla && !k.huerfana) {
+          // cadenita: la colisión va con su objeto
+          const o = objEnMapa(m, k.ancla),
+            a = o && P(o.x, o.y);
+          if (a && sel) {
+            x.strokeStyle = 'rgba(255,255,255,.7)';
+            x.setLineDash([3, 3]);
+            x.beginPath();
+            x.moveTo(p.x + (k.w * z) / 2, p.y + (k.h * z) / 2);
+            x.lineTo(a.x, a.y);
+            x.stroke();
+            x.setLineDash([]);
+          }
+          x.fillStyle = '#fff';
+          x.font = '600 10px system-ui, sans-serif';
+          x.fillText('⚓', p.x + 2, p.y + 11);
+        }
+        if (k.nombre && (sel || z >= 2)) etiqueta(x, k.nombre, p.x + (k.w * z) / 2, p.y - 6, '#e8644f');
         if (sel) asas(x, p.x, p.y, k.w * z, k.h * z);
       });
       objetosDe(m).forEach(o => {
@@ -559,6 +760,25 @@
       if (o.oculto) return;
       const p = P(o.x, o.y);
       if (o.tipo === 'luz' && S.ver.luces) {
+        if (S.sel.length === 1 && S.sel[0] === o.id && S.herr === 'seleccionar')
+          asasLuz(o).forEach(a => {
+            const q = P(a.x, a.y);
+            x.strokeStyle = 'rgba(255,255,255,.5)';
+            x.setLineDash([2, 3]);
+            x.beginPath();
+            x.moveTo(p.x, p.y);
+            x.lineTo(q.x, q.y);
+            x.stroke();
+            x.setLineDash([]);
+            x.fillStyle = a.forma === 'dir' ? '#58a6ff' : a.forma === 'ap' ? '#e8b83a' : '#fff';
+            x.strokeStyle = '#1b1d21';
+            x.beginPath();
+            if (a.forma === 'cua') x.rect(q.x - 4, q.y - 4, 8, 8);
+            else x.arc(q.x, q.y, 5, 0, 7);
+            x.fill();
+            x.stroke();
+          });
+        if (o.nombre) etiqueta(x, o.nombre, p.x, p.y - 12, o.color || '#ffcc66');
         x.fillStyle = o.color || '#ffcc66';
         x.strokeStyle = '#111';
         x.beginPath();
@@ -569,9 +789,19 @@
           x.strokeStyle = 'rgba(255,255,255,.6)';
           x.setLineDash([4, 4]);
           x.beginPath();
-          x.arc(p.x, p.y, o.radio * z, 0, 7);
+          x.arc(p.x, p.y, (o.forma ? CK.luces.extension(o) : o.radio) * z, 0, 7);
           x.stroke();
           x.setLineDash([]);
+          if (o.forma === 'foco' || o.forma === 'sol') {
+            const d = ((o.dir === undefined ? 90 : o.dir) * Math.PI) / 180;
+            x.strokeStyle = '#e8b83a';
+            x.lineWidth = 2;
+            x.beginPath();
+            x.moveTo(p.x, p.y);
+            x.lineTo(p.x + Math.cos(d) * 22, p.y + Math.sin(d) * 22);
+            x.stroke();
+            x.lineWidth = 1;
+          }
         }
       }
       if (o.tipo === 'punto' && o.clase === 'enemigo') {
@@ -672,10 +902,21 @@
     const sel = S.sel.map(buscarObj).filter(Boolean);
     if (sel.length) {
       x.strokeStyle = '#58a6ff';
+      // la caja y las asas giran con el objeto (alrededor de su pie)
+      const girado = (o, fn) => {
+        if (!o.rot || o.tipo) return fn();
+        const a = P(o.x, o.y);
+        x.save();
+        x.translate(a.x, a.y);
+        x.rotate((o.rot * Math.PI) / 180);
+        x.translate(-a.x, -a.y);
+        fn();
+        x.restore();
+      };
       sel.forEach(o => {
         const b = cajaDe(o),
           p = P(b.x, b.y);
-        x.strokeRect(p.x - 0.5, p.y - 0.5, b.w * z + 1, b.h * z + 1);
+        girado(o, () => x.strokeRect(p.x - 0.5, p.y - 0.5, b.w * z + 1, b.h * z + 1));
         const a = P(o.x, o.y);
         x.fillStyle = '#58a6ff';
         x.fillRect(a.x - 2, a.y - 2, 5, 5);
@@ -683,7 +924,7 @@
       if (sel.length === 1 && !sel[0].tipo && S.herr === 'seleccionar') {
         const b = cajaDe(sel[0]),
           p = P(b.x, b.y);
-        asas(x, p.x, p.y, b.w * z, b.h * z, true);
+        girado(sel[0], () => asas(x, p.x, p.y, b.w * z, b.h * z, true));
       }
     }
     if (arrastre && arrastre.tipo === 'marco') {
@@ -790,6 +1031,49 @@
       x.stroke();
     }
   };
+  /** El mouse llevado al espacio del objeto sin girar (gira alrededor de su pie, x / y). Así las asas siguen al giro. */
+  const desrotar = (o, m) => {
+    if (!o || !o.rot) return m;
+    const r = (-o.rot * Math.PI) / 180,
+      c = Math.cos(r),
+      s = Math.sin(r),
+      gx = (px, py, ox, oy) => [ox + (px - ox) * c - (py - oy) * s, oy + (px - ox) * s + (py - oy) * c];
+    const [x, y] = gx(m.x, m.y, o.x, o.y),
+      ps = { x: o.x * vista.z + vista.tx, y: o.y * vista.z + vista.ty },
+      [sx, sy] = m.sx === undefined ? [m.sx, m.sy] : gx(m.sx, m.sy, ps.x, ps.y);
+    return Object.assign({}, m, { x, y, sx, sy });
+  };
+  /** Asas de una luz en el lienzo (en el mundo): alcance, punta (dirección + alcance), apertura, ancho y alto. */
+  const asasLuz = o => {
+    const f = o.forma || 'punto',
+      R = +o.radio || 48,
+      d = (((f === 'area' || f === 'linea') && o.dir === undefined ? 0 : o.dir === undefined ? 90 : +o.dir) * Math.PI) / 180,
+      c = Math.cos(d),
+      s = Math.sin(d),
+      L = (lx, ly) => ({ x: o.x + lx * c - ly * s, y: o.y + lx * s + ly * c }),
+      z = vista.z,
+      out = [];
+    if (f === 'foco' || f === 'sol') {
+      out.push(Object.assign({ k: 'punta', forma: 'dir' }, L(R, 0)));
+      if (f === 'foco') {
+        const a = (((o.apertura === undefined ? 50 : +o.apertura) / 2) * Math.PI) / 180;
+        out.push({ k: 'apertura', forma: 'ap', x: o.x + Math.cos(d + a) * R * 0.7, y: o.y + Math.sin(d + a) * R * 0.7 });
+      } else out.push(Object.assign({ k: 'ancho', forma: 'cua' }, L(0, (+o.ancho || 24) / 2)));
+    } else if (f === 'area') {
+      const w = +o.ancho || 32,
+        hh = +o.alto || 16;
+      out.push(Object.assign({ k: 'ancho', forma: 'cua' }, L(w / 2, 0)));
+      out.push(Object.assign({ k: 'alto', forma: 'cua' }, L(0, hh / 2)));
+      out.push(Object.assign({ k: 'radio', forma: 'cua' }, L(w / 2 + R, 0)));
+      out.push(Object.assign({ k: 'giro', forma: 'dir' }, L(0, -hh / 2 - 16 / z)));
+    } else if (f === 'linea') {
+      out.push(Object.assign({ k: 'ancho', forma: 'cua' }, L((+o.ancho || 40) / 2, 0)));
+      out.push(Object.assign({ k: 'radio', forma: 'cua' }, L(0, R)));
+      out.push(Object.assign({ k: 'giro', forma: 'dir' }, L(0, -R - 16 / z)));
+    } else out.push({ k: 'radio', forma: 'cua', x: o.x + R, y: o.y });
+    return out;
+  };
+  const asaLuzEn = (o, m) => asasLuz(o).find(a => Math.hypot((a.x - m.x) * vista.z, (a.y - m.y) * vista.z) <= 7) || null;
   const asaEn = (b, m) => {
     const z = vista.z,
       px = b.x * z + vista.tx,
@@ -894,7 +1178,9 @@
       !!S.caminar ||
       (M() &&
         objetosDe(M(), true).some(
-          o => (S.ver.luces && o.tipo === 'luz' && o.parpadeo) || (o.clase === 'efecto' && o.props && CK.P.fx[o.props.fx])
+          o =>
+            (S.ver.luces && o.tipo === 'luz' && (o.parpadeo || o.pulso || o.sigue)) ||
+            (o.clase === 'efecto' && o.props && CK.P.fx[o.props.fx])
         ));
     if (hace && !bucle) {
       bucle = true;
@@ -919,13 +1205,16 @@
         if (r.arr[j * r.gw + i] !== valor) {
           r.arr[j * r.gw + i] = valor;
           cambio = true;
+          marcarZona(r, i - 1, j - 1, i, j); // una esquina toca las 4 celdas de alrededor
         }
       }
-    if (cambio) {
-      r.sucio = true;
-      pedir();
-    }
+    if (cambio) pedir();
     return cambio;
+  };
+  /** Anota qué celdas hay que redibujar (se junta todo en un rectángulo). */
+  const marcarZona = (r, i0, j0, i1, j1) => {
+    const z = r.zona;
+    r.zona = z ? { i0: Math.min(z.i0, i0), j0: Math.min(z.j0, j0), i1: Math.max(z.i1, i1), j1: Math.max(z.j1, j1) } : { i0, j0, i1, j1 };
   };
   const pintarTiles = (c, wx, wy, borrar) => {
     const m = M(),
@@ -960,12 +1249,10 @@
         if (r.arr[j * r.gw + i] !== v) {
           r.arr[j * r.gw + i] = v;
           cambio = true;
+          marcarZona(r, i, j, i, j);
         }
       }
-    if (cambio) {
-      r.sucio = true;
-      pedir();
-    }
+    if (cambio) pedir();
     return cambio;
   };
   const rellenar = (arr, gw, gh, i0, j0, valor) => {
@@ -1080,6 +1367,67 @@
     pedir();
   };
 
+  /**
+   * Pone algo de la biblioteca en el lugar de un punto o luz ya colocado (o en {x, y}).
+   * q = { tipo: 'luz', p, nombre } | { tipo: 'npc' | 'fx' | 'asset' | 'prefab', id }
+   */
+  const ponerDeBib = (q, o) => {
+    const mm = M();
+    if (!mm || !q || !o) return;
+    const c = (o.id && capaDe(o.id)) || capaObjetos(),
+      f = fin('Poner de la biblioteca'),
+      nuevos = [];
+    const punto = clase => {
+      const n = { id: CK.uid('o'), tipo: 'punto', clase, nombre: '', x: Math.round(o.x), y: Math.round(o.y), props: {} };
+      c.objetos.push(n);
+      nuevos.push(n.id);
+      return n;
+    };
+    if (q.tipo === 'luz') {
+      let l = o.tipo === 'luz' ? o : null;
+      if (!l) {
+        l = { id: CK.uid('o'), tipo: 'luz', x: Math.round(o.x), y: Math.round(o.y), radio: 48, color: '#ffc46b', fuerza: 0.55 };
+        c.objetos.push(l);
+        nuevos.push(l.id);
+      }
+      CK.luces.aplicar(l, q.p);
+      if (q.nombre) l.nombre = q.nombre;
+    } else if (q.tipo === 'npc') {
+      const n = CK.P.npcs[q.id];
+      if (!n) return;
+      const pt = o.tipo === 'punto' && o.clase === 'npc' ? o : punto('npc');
+      pt.props = pt.props || {};
+      pt.props.npc = n.id;
+      const r = n.retrato && CK.P.assets[n.retrato];
+      if (r && r.tipo !== 'ui') pt.props.sprite = r.id;
+      if (!pt.nombre) pt.nombre = n.nombre;
+    } else if (q.tipo === 'fx') {
+      if (!CK.P.fx[q.id]) return;
+      const pt = o.tipo === 'punto' && o.clase === 'efecto' ? o : punto('efecto');
+      pt.props = pt.props || {};
+      pt.props.fx = q.id;
+      if (!pt.nombre) pt.nombre = CK.P.fx[q.id].nombre || q.id;
+    } else if (q.tipo === 'asset') {
+      if (!CK.P.assets[q.id]) return;
+      const n = nuevoObj(q.id, Math.round(o.x), Math.round(o.y));
+      c.objetos.push(n);
+      nuevos.push(n.id);
+    } else if (q.tipo === 'prefab') {
+      const pf = CK.P.prefabs[q.id];
+      if (!pf) return;
+      instanciaPrefab(pf, Math.round(o.x), Math.round(o.y)).forEach(n => {
+        c.objetos.push(n);
+        nuevos.push(n.id);
+      });
+    }
+    f();
+    CK.emit('mapa-capas');
+    revisarBucle();
+    elegir(nuevos.length ? nuevos : [o.id]);
+    CK.emit('mapa-prop');
+    pedir();
+  };
+
   // ---------------------------------------------------------------- herramientas (eventos del lienzo)
   const herramienta = {
     pasar(m) {
@@ -1090,15 +1438,17 @@
       let cur = '';
       if (S.herr === 'seleccionar') {
         const s = S.sel.length === 1 && buscarObj(S.sel[0]);
-        const asa = s && !s.tipo ? asaEn(cajaDe(s), m) : null;
+        const asa = s && !s.tipo ? asaEn(cajaDe(s), desrotar(s, m)) : s && s.tipo === 'luz' && S.ver.luces && asaLuzEn(s, m) ? 'luz' : null;
         cur =
-          asa === 'rot'
-            ? 'crosshair'
-            : asa
-              ? { nw: 'nwse', se: 'nwse', ne: 'nesw', sw: 'nesw', n: 'ns', s: 'ns', e: 'ew', w: 'ew' }[asa] + '-resize'
-              : objetoEn(m.x, m.y)
-                ? 'move'
-                : '';
+          asa === 'luz'
+            ? 'grab'
+            : asa === 'rot'
+              ? 'crosshair'
+              : asa
+                ? { nw: 'nwse', se: 'nwse', ne: 'nesw', sw: 'nesw', n: 'ns', s: 'ns', e: 'ew', w: 'ew' }[asa] + '-resize'
+                : objetoEn(m.x, m.y)
+                  ? 'move'
+                  : '';
       } else cur = 'crosshair';
       if (!CK._espacio) vista.c.style.cursor = CK.cur(cur, S.herr);
     },
@@ -1115,14 +1465,19 @@
       }
       if (h === 'seleccionar') {
         const s = S.sel.length === 1 && buscarObj(S.sel[0]),
-          asa = s && !s.tipo ? asaEn(cajaDe(s), m) : null;
+          asa = s && !s.tipo ? asaEn(cajaDe(s), desrotar(s, m)) : null;
+        const al = s && s.tipo === 'luz' && S.ver.luces && !der ? asaLuzEn(s, m) : null;
+        if (al) {
+          arrastre = { tipo: 'luz-asa', asa: al.k, o: s, fin: fin('Ajustar luz') };
+          return;
+        }
         if (asa) {
           arrastre = {
             tipo: asa === 'rot' ? 'rotar' : 'escalar',
             asa,
             o0: CK.clone(s),
             caja: cajaDe(s),
-            m0: m,
+            m0: desrotar(s, m),
             fin: fin(asa === 'rot' ? 'Rotar' : 'Escalar')
           };
           return;
@@ -1369,6 +1724,8 @@
         elegir([o.id]);
         CK.emit('mapa-capas');
         CK.mapa.herr('seleccionar');
+        // NPC o efecto: si hay fichas o efectos hechos, ofrecerlos ahí mismo
+        if (CK.mapa.ofrecerBib) CK.mapa.ofrecerBib(o, m.e);
         return;
       }
       if (h === 'nota') {
@@ -1433,28 +1790,86 @@
         CK.emit('mapa-prop');
         pedir();
       } else if (a.tipo === 'escalar') {
+        // El borde opuesto al asa queda quieto (como en cualquier programa de dibujo); con Ctrl se escala desde el centro.
+        // Todo se calcula en el espacio del objeto sin girar y el pie se vuelve a llevar al mundo con el giro.
+        m = desrotar(a.o0, m);
         const o = buscarObj(a.o0.id),
           f = frameDe(o),
-          b = a.caja;
-        let sx = a.o0.sx,
-          sy = a.o0.sy;
-        if (/e|w/.test(a.asa)) {
-          const mitad = Math.abs(m.x - a.o0.x);
-          sx = Math.max(0.1, (mitad * 2) / f.w);
-        }
-        if (/n/.test(a.asa)) sy = Math.max(0.1, (a.o0.y - m.y) / f.h);
-        if (a.asa === 's') sy = Math.max(0.1, (b.h + (m.y - a.m0.y)) / f.h);
+          o0 = a.o0,
+          s0x = Math.abs(o0.sx || 1),
+          s0y = Math.abs(o0.sy || 1),
+          w0 = f.w * s0x,
+          h0 = f.h * s0y,
+          izq = o0.x - w0 / 2,
+          der = o0.x + w0 / 2,
+          arr = o0.y - h0,
+          centro = m.ctrl;
+        let w = w0,
+          hh = h0;
+        if (/e/.test(a.asa)) w = centro ? (m.x - o0.x) * 2 : m.x - izq;
+        if (/w/.test(a.asa)) w = centro ? (o0.x - m.x) * 2 : der - m.x;
+        if (/n/.test(a.asa)) hh = centro ? (o0.y - h0 / 2 - m.y) * 2 : o0.y - m.y;
+        if (/s/.test(a.asa)) hh = centro ? (m.y - (o0.y - h0 / 2)) * 2 : m.y - arr;
+        w = Math.max(1, w);
+        hh = Math.max(1, hh);
         if (a.asa.length === 2 && !m.shift) {
-          const k = Math.max(sx / a.o0.sx, sy / a.o0.sy);
-          sx = a.o0.sx * k;
-          sy = a.o0.sy * k;
+          // esquinas: mantienen la proporción (Mayús: libre)
+          const k = Math.max(w / w0, hh / h0);
+          w = w0 * k;
+          hh = h0 * k;
         }
-        if (!m.alt) {
+        // tamaños en píxeles enteros (el pixel art no queda con medio píxel); con Alt, de a 25 %
+        let sx = Math.round(w) / f.w,
+          sy = Math.round(hh) / f.h;
+        if (m.alt) {
           sx = Math.max(0.25, Math.round(sx * 4) / 4);
           sy = Math.max(0.25, Math.round(sy * 4) / 4);
         }
-        o.sx = +sx.toFixed(3);
-        o.sy = +sy.toFixed(3);
+        w = f.w * sx;
+        hh = f.h * sy;
+        // dónde queda el pie (abajo al centro) en el espacio sin girar
+        let px = o0.x,
+          py = o0.y;
+        if (!centro) {
+          if (/e/.test(a.asa)) px = izq + w / 2;
+          if (/w/.test(a.asa)) px = der - w / 2;
+          if (/s/.test(a.asa)) py = arr + hh;
+        } else py = o0.y - h0 / 2 + hh / 2;
+        const r = ((o0.rot || 0) * Math.PI) / 180,
+          dx = px - o0.x,
+          dy = py - o0.y;
+        o.x = Math.round(o0.x + dx * Math.cos(r) - dy * Math.sin(r));
+        o.y = Math.round(o0.y + dx * Math.sin(r) + dy * Math.cos(r));
+        o.sx = +(Math.sign(o0.sx || 1) * sx).toFixed(4);
+        o.sy = +(Math.sign(o0.sy || 1) * sy).toFixed(4);
+        CK.estado(
+          'Tamaño: ' + Math.round(w) + ' × ' + Math.round(hh) + ' px (' + Math.round(sx * 100) + ' % × ' + Math.round(sy * 100) + ' %)'
+        );
+        CK.emit('mapa-prop');
+        pedir();
+      } else if (a.tipo === 'luz-asa') {
+        const o = a.o,
+          dx = m.x - o.x,
+          dy = m.y - o.y,
+          f = o.forma || 'punto',
+          ang = ((((Math.atan2(dy, dx) * 180) / Math.PI) % 360) + 360) % 360,
+          d = (((f === 'area' || f === 'linea') && o.dir === undefined ? 0 : o.dir === undefined ? 90 : +o.dir) * Math.PI) / 180,
+          lx = dx * Math.cos(d) + dy * Math.sin(d),
+          ly = -dx * Math.sin(d) + dy * Math.cos(d),
+          paso = v => (m.shift ? Math.round(v) : Math.round(v / 15) * 15) % 360;
+        if (a.asa === 'radio') {
+          const base = f === 'area' ? (+o.ancho || 32) / 2 : 0;
+          o.radio = Math.max(4, Math.round(f === 'linea' ? Math.abs(ly) : f === 'area' ? lx - base : Math.hypot(dx, dy)));
+        } else if (a.asa === 'punta') {
+          o.radio = Math.max(4, Math.round(Math.hypot(dx, dy)));
+          o.dir = paso(ang);
+        } else if (a.asa === 'giro') {
+          o.dir = paso(ang + 90);
+        } else if (a.asa === 'apertura') {
+          let df = Math.abs(((ang - (o.dir === undefined ? 90 : +o.dir) + 540) % 360) - 180);
+          o.apertura = Math.max(4, Math.min(300, Math.round(df * 2)));
+        } else if (a.asa === 'ancho') o.ancho = Math.max(1, Math.round(Math.abs(f === 'sol' ? ly : lx) * 2));
+        else if (a.asa === 'alto') o.alto = Math.max(1, Math.round(Math.abs(ly) * 2));
         CK.emit('mapa-prop');
         pedir();
       } else if (a.tipo === 'rotar') {
@@ -1482,6 +1897,7 @@
       } else if (a.tipo === 'col-mover') {
         a.k.x = ajustar(m.x - a.dx);
         a.k.y = ajustar(m.y - a.dy);
+        reanclar(a.k);
         CK.emit('mapa-prop');
         pedir();
       } else if (a.tipo === 'col-escalar') {
@@ -1503,6 +1919,7 @@
         k.y = ny0;
         k.w = nx1 - nx0;
         k.h = ny1 - ny0;
+        reanclar(k);
         CK.emit('mapa-prop');
         pedir();
       } else if (a.tipo === 'mover-nota') {
@@ -1569,14 +1986,23 @@
         if (r.w >= 2 && r.h >= 2) {
           mm.colisiones = mm.colisiones || [];
           const k = { id: CK.uid('k'), x: r.x, y: r.y, w: r.w, h: r.h };
+          const debajo = S.colAnclar && objetoDebajo(mm, r.x + r.w / 2, r.y + r.h / 2);
+          if (debajo) anclarCol(k, debajo);
           mm.colisiones.push(k);
           a.fin();
+          if (debajo)
+            CK.estado(
+              'Colisión anclada a «' +
+                ((CK.P.assets[debajo.asset] || {}).nombre || 'objeto') +
+                '»: se mueve con él. Se desancla en Propiedades.'
+            );
           S.selCol = k.id;
           CK.emit('mapa-sel');
         }
         pedir();
         return;
       }
+      if ((a.tipo === 'col-mover' || a.tipo === 'col-escalar') && a.k) reanclar(a.k);
       if (a.fin) {
         a.fin();
         CK.emit('mapa-prop');
@@ -1606,6 +2032,8 @@
       m.capas.forEach(c => {
         if (c.tipo === 'objetos') c.objetos = c.objetos.filter(o => !S.sel.includes(o.id));
       });
+      // sus colisiones ancladas se van con ellos
+      if (m.colisiones) m.colisiones = m.colisiones.filter(k => !k.ancla || !S.sel.includes(k.ancla));
       f();
       S.sel = [];
       CK.emit('mapa-capas');
@@ -1633,6 +2061,9 @@
       }
       c.objetos.push(n);
       nuevos.push(n.id);
+      (M().colisiones || [])
+        .filter(k => k.ancla === o.id)
+        .forEach(k => M().colisiones.push(Object.assign(CK.clone(k), { id: CK.uid('k'), ancla: n.id })));
     });
     Object.keys(grupos).forEach(g => {
       M().capas.forEach(c => {
@@ -1797,6 +2228,14 @@
     S,
     ZONAS,
     PUNTOS,
+    ponerDeBib,
+    pideHorneado,
+    hornearObjeto,
+    sincronizarCols,
+    anclarCol,
+    desanclarCol,
+    reanclar,
+    objetoDebajo,
     nuevaCapa,
     objetosDe,
     colDe,

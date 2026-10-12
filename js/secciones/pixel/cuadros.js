@@ -118,6 +118,11 @@
           return;
         }
         const fi = await CK.fs.leer(dir, ruta);
+        // lo que escribió el propio editor al guardar no cuenta (antes volvía a cargar una copia vieja y deshacía lo pintado)
+        if (fi.lastModified > ult + 50 && fi.lastModified <= (CK._ultimaEscritura || 0) + 3000) {
+          ult = fi.lastModified;
+          return;
+        }
         if (fi.lastModified > ult + 50) {
           ult = fi.lastModified;
           const c = await CK.cargarImagen(fi);

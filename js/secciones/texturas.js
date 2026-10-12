@@ -3,7 +3,7 @@
 'use strict';
 (function () {
   const h = CK.h;
-  let el, panel, tabs, cv, pie, galeria, info;
+  let el, panel, tabs, cv, pie, galeria, info, vacioT;
   const st = {
     fuente: null,
     actual: null,
@@ -134,6 +134,10 @@
   }, 50);
   const pintarVista = () => {
     if (!cv) return;
+    if (vacioT) {
+      const sin = st.modo === 'textura' ? !st.fuente : !st.actual;
+      vacioT(sin);
+    }
     const caja = cv.parentElement.getBoundingClientRect(),
       W = Math.max(80, Math.floor(caja.width)),
       H = Math.max(80, Math.floor(caja.height));
@@ -590,6 +594,7 @@
         )
       )
     );
+    CK.plegar(c, ['Zona', 'Mover →', 'Mover ↓', 'Contraste', 'Brillo', 'Saturación', 'Tono']);
   };
   const pVariantes = c => {
     const a = CK.P.assets[st.actual];
@@ -752,6 +757,31 @@
       )
     );
     if (!a) return;
+    if (TL.editable(a))
+      c.append(
+        h(
+          'div.bloque',
+          h('h3.bloque-tit', 'Bordes automáticos'),
+          h(
+            'p.nota-txt',
+            'Para pintar el suelo y que los bordes y esquinas salgan solos: sirve con hojas de 16 o 47 piezas y con autotiles de RPG Maker.'
+          ),
+          CK.btn({
+            ico: 'transicion',
+            txt: 'Armar bordes automáticos',
+            cls: 'chico pri',
+            desc: 'Elegí qué pieza es cada borde y esquina (o que lo adivine). Se crea un tileset de bordes para una capa de Terreno del mapa.',
+            on: async () => {
+              const nid = await TL.armarBordes(st.actual);
+              if (nid) {
+                st.actual = nid;
+                galeria.refrescar();
+                tabs.refrescar();
+              }
+            }
+          })
+        )
+      );
     c.append(
       h(
         'div.bloque',
@@ -996,6 +1026,26 @@
       )
     );
     el.append(panel, centro, der);
+    centro.firstChild.style.position = 'relative';
+    vacioT = CK.vacioSobre(
+      centro.firstChild,
+      'texturas',
+      'Suelos y tiles',
+      'Subí una foto o dibujo de piedra, madera, pasto o tierra y sale un tile repetible en tu paleta. Si ya tenés una hoja de tiles (por ejemplo de itch.io), importala.',
+      CK.btn({
+        ico: 'importar',
+        txt: 'Subir referencia',
+        cls: 'pri',
+        on: async () => {
+          const as = await CK.importarImagenes('ref');
+          if (as.length) {
+            st.fuente = as[0].id;
+            tabs.ir('textura');
+          }
+        }
+      }),
+      CK.btn({ ico: 'grilla', txt: 'Importar tiles', on: () => importarTiles() })
+    );
     CK.soltarEn(el, async fs => {
       if (st.modo === 'tileset') return importarTiles(fs);
       const as = await CK.importarImagenes('ref', fs);
@@ -1031,7 +1081,12 @@
     tabs.refrescar();
     galeria.refrescar();
   };
-  CK.texturas = { st };
+  CK.texturas = {
+    st,
+    get tabs() {
+      return tabs;
+    }
+  };
   CK.on('tiles-cambio', id => {
     if (el && st.actual === id && CK.seccionVisible('texturas')) {
       galeria.refrescar();

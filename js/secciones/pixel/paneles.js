@@ -818,6 +818,14 @@
           on: () => Px.enCapa('Voltear', PIX.flipH)
         }),
         CK.btn({
+          ico: 'basura',
+          tip: 'Vaciar el lienzo',
+          desc: 'Deja la capa activa en blanco (transparente) en este cuadro. Si hay algo seleccionado, solo eso. Se deshace con Ctrl + Z.',
+          tecla: 'Ctrl + Supr',
+          cls: 'chico plano',
+          on: () => Px.vaciarLienzo()
+        }),
+        CK.btn({
           ico: 'tamano',
           tip: 'Tamaño del lienzo',
           desc: 'Cambia el ancho y alto del dibujo (o de cada cuadro).',
@@ -851,68 +859,38 @@
     );
   };
   const nuevo = async () => {
-    const T = CK.P.estilo.tile,
-      d = { nombre: 'dibujo', w: T * 2, h: T * 2, tipo: 'sprite' };
-    const rap = (txt, w, hh) =>
-        CK.btn({
-          txt,
-          cls: 'chico',
-          on: () => {
-            d.w = w;
-            d.h = hh;
-            iw.value = w;
-            ih.value = hh;
-          }
-        }),
-      iw = CK.num(d.w, { min: 1, max: 1024 }, v => {
-        d.w = v;
-      }),
-      ih = CK.num(d.h, { min: 1, max: 1024 }, v => {
-        d.h = v;
-      });
+    const d = { nombre: '', w: 16, h: 16, tipo: 'sprite' };
+    let selTipo;
+    const sug = CK.sugerencias.bloque({
+      alCambiar: v => {
+        d.w = v.w;
+        d.h = v.h;
+        d.tipo = v.tipo.tipo;
+        if (selTipo) selTipo.value = d.tipo;
+      }
+    });
+    selTipo = CK.sel(
+      d.tipo,
+      Object.keys(CK.asset.TIPOS)
+        .filter(k => !['ref', 'hoja'].includes(k))
+        .map(k => [k, CK.asset.TIPOS[k]]),
+      v => {
+        d.tipo = v;
+      }
+    );
+    selTipo.value = d.tipo;
+    const iN = CK.txt('', v => (d.nombre = v), { vivo: true });
+    iN.placeholder = 'Por ejemplo: herrero, barril, roble';
     const ok = await CK.ventana({
       titulo: 'Dibujo nuevo',
-      cuerpo: h(
-        'div',
-        CK.campo(
-          'Nombre',
-          CK.txt(
-            d.nombre,
-            v => {
-              d.nombre = v;
-            },
-            { vivo: true }
-          )
-        ),
-        CK.campo(
-          'Tipo',
-          CK.sel(
-            d.tipo,
-            Object.keys(CK.asset.TIPOS)
-              .filter(k => !['ref', 'hoja'].includes(k))
-              .map(k => [k, CK.asset.TIPOS[k]]),
-            v => {
-              d.tipo = v;
-            }
-          )
-        ),
-        CK.campo('Ancho', iw),
-        CK.campo('Alto', ih),
-        h(
-          'div.fila',
-          h('span.nota-txt', 'Rápidos:'),
-          rap('1 tile', T, T),
-          rap('2 × 2 tiles', T * 2, T * 2),
-          rap('Personaje', CK.P.estilo.personaje[0], CK.P.estilo.personaje[1]),
-          rap('Ícono 16', 16, 16),
-          rap('Ícono 32', 32, 32)
-        )
-      ),
+      ancho: 860,
+      cuerpo: h('div', h('div.duo', CK.campo('Nombre', iN), CK.campo('Categoría', selTipo)), sug.el),
       botones: [
         { txt: 'Cancelar', valor: false },
         { txt: 'Crear', cls: 'pri', valor: true }
       ]
     });
+    sug.cerrar();
     if (!ok) return;
     const a = CK.asset.crear({ nombre: d.nombre.trim() || 'dibujo', tipo: d.tipo, lienzo: CK.lienzo(d.w, d.h), origen: 'dibujado a mano' });
     Px.abrir(a.id);

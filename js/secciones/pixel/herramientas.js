@@ -8,7 +8,21 @@
       const p = Px.P(m),
         f = Px.FR();
       Px.S.cursor = p;
-      if (Px.S.herr === 'transformar' && Px.tr) {
+      const conAsas = Px.S.herr === 'transformar' || ['selRect', 'lazo', 'varita', 'mover'].includes(Px.S.herr);
+      if (conAsas && !Px.tr && Px.asaEn(m)) {
+        const q = Px.asaEn(m);
+        Px.vista.c.style.cursor = q.rot
+          ? 'alias'
+          : q.hx && q.hy
+            ? q.hx === q.hy
+              ? 'nwse-resize'
+              : 'nesw-resize'
+            : q.hx
+              ? 'ew-resize'
+              : 'ns-resize';
+        return;
+      }
+      if (conAsas && Px.tr) {
         const mj = Px.manijasTr(Px.vista),
           cerca = q => Math.hypot(q.x - m.sx, q.y - m.sy) <= 8,
           hm = mj.l.find(cerca);
@@ -24,7 +38,9 @@
                 : 'ns-resize'
             : Px.dentroTr(Px.vista, m.sx, m.sy)
               ? CK.cur('move')
-              : 'alias';
+              : Px.S.herr === 'transformar'
+                ? 'alias'
+                : 'crosshair';
         Px.pedir();
         return;
       }
@@ -61,6 +77,21 @@
         Px.trBajar(m);
         return;
       }
+      // con Selección, Lazo, Varita o Mover se transforma de una vez: las asas de la selección escalan y la de arriba gira
+      if (['selRect', 'lazo', 'varita', 'mover'].includes(hh) && !m.alt) {
+        if (Px.tr) {
+          if (Px.asaEn(m) || Px.dentroTr(Px.vista, m.sx, m.sy)) {
+            Px.trBajar(m);
+            return;
+          }
+          Px.terminarTr(); // clic afuera: queda fijo y sigue como siempre (nueva selección)
+          Px.soltarFlot();
+        } else if (Px.asaEn(m)) {
+          Px.empezarTr({ caja: 'sel' });
+          if (Px.tr) Px.trBajar(m);
+          return;
+        }
+      }
       if (m.alt || hh === 'gotero') {
         const c = Px.colorEn(p.x, p.y, true);
         if (c) {
@@ -88,10 +119,11 @@
           pts: [],
           antes: hh === 'sombrear' || Px.S.perfecto ? Px.leer() : null,
           hechos: new Set(),
+          cuenta: new Map(), // cuántas veces pasó el trazo por cada píxel (el píxel perfecto solo devuelve los que pintó una vez)
           pasos: der ? -Px.S.sombra : Px.S.sombra
         };
-        if (hh !== 'sombrear' && m.shift && Px.S.ultimo)
-          Px.bres(Px.S.ultimo.x, Px.S.ultimo.y, p.x, p.y, (qx, qy) => Px.sello(x, qx, qy, color, Px.S.tam));
+        // Mayús: línea recta desde el último punto (o desde acá) que se estira mientras arrastrás; se pinta al soltar
+        if (hh !== 'sombrear' && m.shift) Px.trazo.linea = { a: Px.S.ultimo || p, b: Px.ajustarLinea(Px.S.ultimo || p, p, m.ctrl) };
         else puntoTrazo(p);
         Px.S.ultimo = p;
         Px.pedir();
@@ -169,6 +201,24 @@
         return;
       }
       if (['lapiz', 'borrador', 'sombrear'].includes(t.tipo)) {
+        if (t.linea) {
+          // soltar Mayús en medio de un trazo a mano: se pinta la recta y sigue a mano alzada desde su punta
+          if (!m.shift && t.linea.enMedio) {
+            pintarLinea(t);
+            return;
+          }
+          const b = Px.ajustarLinea(t.linea.a, p, m.ctrl);
+          if (b.x !== t.linea.b.x || b.y !== t.linea.b.y) {
+            t.linea.b = b;
+            Px.pedir();
+          }
+          return;
+        }
+        if (m.shift && t.tipo !== 'sombrear' && Px.S.ultimo) {
+          t.linea = { a: Px.S.ultimo, b: Px.ajustarLinea(Px.S.ultimo, p, m.ctrl), enMedio: true };
+          Px.pedir();
+          return;
+        }
         if (Px.S.ultimo && (Px.S.ultimo.x !== p.x || Px.S.ultimo.y !== p.y)) {
           const pts = [];
           Px.bres(Px.S.ultimo.x, Px.S.ultimo.y, p.x, p.y, (x, y) => pts.push({ x, y }));
@@ -213,10 +263,12 @@
       Px.trazo = null;
       if (!t) return;
       if (t.tipo === 'tr') {
+        Px.aplicarTr(); // al soltar: el resultado final (limpio si "Giro limpio" está prendido)
         Px.pintarTira();
         return;
       }
       if (['lapiz', 'borrador', 'sombrear'].includes(t.tipo)) {
+        if (t.linea) pintarLinea(t);
         t.x.restore();
         t.fin();
         Px.pedir();
@@ -291,28 +343,87 @@
       return;
     }
     Px.sello(t.x, p.x, p.y, t.color, Px.S.tam);
-    if (Px.S.perfecto && Px.S.tam === 1 && t.antes) {
-      t.pts.push(p);
-      const n = t.pts.length;
-      if (n >= 3) {
-        const a = t.pts[n - 3],
-          b = t.pts[n - 2],
-          c = t.pts[n - 1];
-        if (Math.abs(a.x - c.x) === 1 && Math.abs(a.y - c.y) === 1 && (b.x === a.x || b.y === a.y) && (b.x === c.x || b.y === c.y)) {
-          Px.espejos(b.x, b.y, (qx, qy) => {
-            if (qx < 0 || qy < 0 || qx >= f.w || qy >= f.h) return;
-            const i = (qy * f.w + qx) * 4,
-              d = t.antes.data;
-            t.x.clearRect(qx, qy, 1, 1);
-            if (d[i + 3]) {
-              t.x.fillStyle = `rgba(${d[i]},${d[i + 1]},${d[i + 2]},${d[i + 3] / 255})`;
-              t.x.fillRect(qx, qy, 1, 1);
-            }
-          });
-          t.pts.splice(n - 2, 1);
-        }
+    if (!(Px.S.perfecto && Px.S.tam === 1 && t.antes)) return;
+    // píxel perfecto: se cuenta cada píxel pintado; al quitar la esquina doble de una "L" solo vuelve a su color de antes
+    // si el trazo no había pasado ya por ahí (antes los cruces y las vueltas atrás dejaban huecos con el color viejo)
+    Px.espejos(p.x, p.y, (qx, qy) => {
+      if (qx < 0 || qy < 0 || qx >= f.w || qy >= f.h) return;
+      const k = qy * f.w + qx;
+      t.cuenta.set(k, (t.cuenta.get(k) || 0) + 1);
+    });
+    t.pts.push(p);
+    const n = t.pts.length;
+    if (n < 3) return;
+    const a = t.pts[n - 3],
+      b = t.pts[n - 2],
+      c = t.pts[n - 1];
+    if (!(Math.abs(a.x - c.x) === 1 && Math.abs(a.y - c.y) === 1 && (b.x === a.x || b.y === a.y) && (b.x === c.x || b.y === c.y))) return;
+    const hechos = new Set();
+    Px.espejos(b.x, b.y, (qx, qy) => {
+      if (qx < 0 || qy < 0 || qx >= f.w || qy >= f.h) return;
+      const k = qy * f.w + qx;
+      if (hechos.has(k)) return; // con espejos un píxel del centro puede aparecer dos veces
+      hechos.add(k);
+      const v = (t.cuenta.get(k) || 1) - 1;
+      t.cuenta.set(k, v);
+      if (v > 0) return; // el trazo ya había pasado por acá: queda pintado
+      const i = k * 4,
+        d = t.antes.data;
+      t.x.clearRect(qx, qy, 1, 1);
+      if (d[i + 3]) {
+        t.x.fillStyle = `rgba(${d[i]},${d[i + 1]},${d[i + 2]},${d[i + 3] / 255})`;
+        t.x.fillRect(qx, qy, 1, 1);
+      }
+    });
+    t.pts.splice(n - 2, 1);
+  };
+
+  /** Pinta la recta de Mayús (sin dobles en las esquinas, como el píxel perfecto) y deja la punta como último punto. */
+  const pintarLinea = t => {
+    const { a, b } = t.linea;
+    t.linea = null;
+    const f = Px.FR();
+    Px.bres(a.x, a.y, b.x, b.y, (qx, qy) => {
+      Px.sello(t.x, qx, qy, t.color, Px.S.tam);
+      if (t.cuenta)
+        Px.espejos(qx, qy, (ex, ey) => {
+          if (ex >= 0 && ey >= 0 && ex < f.w && ey < f.h) t.cuenta.set(ey * f.w + ex, (t.cuenta.get(ey * f.w + ex) || 0) + 1);
+        });
+    });
+    t.pts = [b];
+    Px.S.ultimo = b;
+    Px.pedir();
+  };
+  /** Punta de la recta: con Ctrl se ajusta a pendientes limpias de pixel art (1:0, 1:1, 1:2, 1:3 y sus giros),
+      siempre en múltiplos enteros del paso, así cada escalón tiene el mismo largo. */
+  const PASOS = [
+    [1, 0],
+    [3, 1],
+    [2, 1],
+    [1, 1],
+    [1, 2],
+    [1, 3],
+    [0, 1]
+  ];
+  Px.ajustarLinea = (a, p, limpio) => {
+    if (!limpio) return { x: p.x, y: p.y };
+    const dx = p.x - a.x,
+      dy = p.y - a.y;
+    if (!dx && !dy) return { x: p.x, y: p.y };
+    const ang = Math.atan2(Math.abs(dy), Math.abs(dx));
+    let mejor = PASOS[0],
+      dif = 9;
+    for (const s of PASOS) {
+      const d = Math.abs(Math.atan2(s[1], s[0]) - ang);
+      if (d < dif) {
+        dif = d;
+        mejor = s;
       }
     }
+    const largo = Math.hypot(dx, dy),
+      paso = Math.hypot(mejor[0], mejor[1]),
+      k = Math.max(1, Math.round(largo / paso));
+    return { x: a.x + Math.sign(dx) * mejor[0] * k, y: a.y + Math.sign(dy) * mejor[1] * k };
   };
 
   // ---------------------------------------------------------------- pintar el lienzo
@@ -365,9 +476,26 @@
         })
       );
     }
+    const ln = Px.trazo && Px.trazo.linea;
+    if (ln) {
+      // vista previa de la recta de Mayús (el borrador se muestra en rojo translúcido)
+      const t = Px.S.tam,
+        o = Math.floor((t - 1) / 2);
+      x.fillStyle = Px.trazo.color || 'rgba(255,80,80,.55)';
+      Px.bres(ln.a.x, ln.a.y, ln.b.x, ln.b.y, (qx, qy) =>
+        Px.espejos(qx, qy, (ex, ey) => {
+          if (Px.S.redonda && t > 2) Px.puntaPx(t).forEach(([dx, dy]) => x.fillRect(ex - o + dx, ey - o + dy, 1, 1));
+          else x.fillRect(ex - o, ey - o, t, t);
+        })
+      );
+    }
     x.restore();
     x.save();
     x.lineWidth = 1;
+    if (ln) {
+      const largo = Math.max(Math.abs(ln.b.x - ln.a.x), Math.abs(ln.b.y - ln.a.y)) + 1;
+      CK.estadoDer('Recta: ' + largo + ' px  ·  Ctrl: pendientes limpias');
+    }
     if (Px.S.grilla && z >= 8) v.grilla(x, 1, f.w, f.h, 'rgba(255,255,255,.07)');
     const T = CK.P.estilo.tile;
     if (Px.S.grilla && f.w > T && z * T >= 24) v.grilla(x, T, f.w, f.h, 'rgba(232,184,58,.35)');
@@ -476,6 +604,29 @@
       x.strokeStyle = '#000';
       x.stroke();
       x.lineWidth = 1;
+    }
+    // asas de la selección (sin transformar todavía): agarrarlas transforma de una vez
+    const bs = !Px.tr && !Px.trazo && ['selRect', 'lazo', 'varita', 'mover'].includes(Px.S.herr) && Px.cajaSel();
+    if (bs) {
+      const mj = Px.manijasCaja(v, bs);
+      x.strokeStyle = '#58d0ff';
+      x.lineWidth = 1;
+      x.beginPath();
+      x.moveTo(mj.arriba.x, mj.arriba.y);
+      x.lineTo(mj.rot.x, mj.rot.y);
+      x.stroke();
+      mj.l.forEach(q => {
+        x.fillStyle = '#fff';
+        x.strokeStyle = '#000';
+        x.fillRect(q.x - 3, q.y - 3, 6, 6);
+        x.strokeRect(q.x - 3.5, q.y - 3.5, 7, 7);
+      });
+      x.beginPath();
+      x.arc(mj.rot.x, mj.rot.y, 4.5, 0, 7);
+      x.fillStyle = '#58d0ff';
+      x.fill();
+      x.strokeStyle = '#000';
+      x.stroke();
     }
     const c = Px.S.cursor;
     if (c && !Px.trazo && ['lapiz', 'borrador', 'sombrear', 'linea', 'rect', 'elipse'].includes(Px.S.herr)) {

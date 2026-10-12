@@ -116,6 +116,23 @@
     Px.pedir();
     CK.estado('Pegado: arrastralo a su lugar y hacé clic afuera o Enter para fijarlo.');
   };
+  /** Vacía la capa activa en el cuadro actual (o solo lo seleccionado). Deshacible. */
+  Px.vaciarLienzo = () => {
+    if (!Px.doc) return;
+    if (Px.tr) Px.cancelarTr();
+    if (Px.flot || Px.sel) {
+      Px.borrarSel();
+      CK.estado('Selección vaciada · Ctrl + Z para volver');
+      return;
+    }
+    const f = Px.FR(),
+      fin = Px.cambioCapa('Vaciar lienzo');
+    CK.ctx(Px.capa().c).clearRect(f.x, f.y, f.w, f.h);
+    fin();
+    Px.S.ultimo = null;
+    Px.pedir();
+    CK.aviso('Lienzo vacío (capa "' + Px.capa().nombre + '"). Ctrl + Z para volver.', 'info', 3500);
+  };
   Px.borrarSel = () => {
     if (Px.flot) {
       const fin = Px.flot.fin;

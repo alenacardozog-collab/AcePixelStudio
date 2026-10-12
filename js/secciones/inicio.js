@@ -50,6 +50,22 @@
             'p.nota-txt',
             'El proyecto guarda la guía de estilo, los assets, los mapas y todo lo demás. Sirve para CastleKnight y para cualquier otro juego.'
           )
+        ),
+        h(
+          'div.caja',
+          { style: { marginTop: '12px' } },
+          h('h2', { style: { marginTop: 0 } }, '¿Primera vez?'),
+          h(
+            'p.ayuda-txt',
+            'Abrí el proyecto de ejemplo: un mapa chico con suelo, árboles, una bandera animada y una fogata, para tocar todo sin miedo. La primera vez que entres a cada sección, un recorrido corto te muestra qué hay en cada lugar.'
+          ),
+          h(
+            'div.fila',
+            { style: { marginTop: '8px' } },
+            CK.btn({ ico: 'mapa', txt: 'Abrir el proyecto de ejemplo', on: () => CK.guia.proyectoEjemplo() }),
+            CK.P ? CK.btn({ ico: 'mas', txt: 'Crear algo nuevo', on: () => CK.sugerencias.crearNuevo() }) : null,
+            CK.btn({ ico: 'ayuda', txt: '¿Cómo hago…?', cls: 'plano', on: () => CK.guia.ventana() })
+          )
         )
       );
       if (lista.length)

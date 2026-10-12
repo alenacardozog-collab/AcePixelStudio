@@ -347,9 +347,13 @@
     }
     CK.tocar();
   };
+  let enMacro = false;
+  const variantes = {}; // versiones probadas con "Variar", por efecto
   const ed = (nombre, fn, final) => {
     if (antes === null) antes = JSON.stringify(FX());
     fn(FX());
+    // tocar algo en "Ajuste fino" fija lo que se ve y deja los controles principales en 100 %
+    if (!enMacro && FX() && FX().base) CK.fxSimple.fijar(FX());
     if (sim) sim.e = FX();
     tocar(nombre, final);
   };
@@ -923,7 +927,7 @@
       filas
     );
   };
-  const pintarDer = () => {
+  const pintarDer0 = () => {
     if (!der) return;
     CK.vaciar(der);
     const f = FX();
@@ -1250,7 +1254,7 @@
           h('h3.bloque-tit', 'De dónde salen'),
           CK.campo(
             'Forma',
-            CK.sel(
+            CK.fxSimple.conDibujos(
               c.forma,
               [
                 ['punto', 'Un punto'],
@@ -1315,7 +1319,7 @@
             )
           ),
           rg(
-            'Por segundo',
+            'Salen por segundo',
             () => c.tasa,
             v => {
               c.tasa = v;
@@ -1388,7 +1392,7 @@
             10
           ),
           rg(
-            'Freno',
+            'Se frenan',
             () => c.freno || 0,
             v => {
               c.freno = v;
@@ -1440,21 +1444,21 @@
             'Figura',
             h(
               'div.fila.junto',
-              CK.sel(
+              CK.fxSimple.conDibujos(
                 c.figura,
                 [
                   ['pixel', 'Cuadrado'],
-                  ['circulo', 'Círculo'],
+                  ['circulo', 'Círculo', 'circulo_fig'],
                   ['rombo', 'Rombo'],
-                  ['anillo', 'Anillo (aro)'],
+                  ['anillo', 'Anillo (aro)', 'anillo_fig'],
                   ['chispa', 'Chispa (raya corta)'],
-                  ['linea', 'Línea (raya larga)'],
+                  ['linea', 'Línea (raya larga)', 'linea_fig'],
                   ['cruz', 'Cruz'],
                   ['estrella', 'Estrella'],
                   ['gota', 'Gota'],
                   ['brillo', 'Brillo difuso'],
                   ['humo', 'Nube suave'],
-                  ['asset', 'Un asset…']
+                  ['asset', 'Un dibujo del proyecto…']
                 ],
                 async v => {
                   if (v === 'asset') {
@@ -1491,7 +1495,7 @@
           h('span.mini-rot', 'Agregar de la paleta'),
           palE,
           CK.campo(
-            'Mezcla',
+            'Mezcla con el fondo',
             CK.sel(
               c.mezcla,
               [
@@ -1900,6 +1904,37 @@
         )
       );
   };
+  /** Panel derecho: "Lo principal" arriba (controles grandes) y todo lo de siempre en "Ajuste fino". */
+  const pintarDer = () => {
+    const scroll = der ? der.scrollTop : 0;
+    pintarDer0();
+    const f = FX();
+    if (!der || !f || !CK.fxSimple) return;
+    const resto = [...der.children];
+    const fino = CK.masOpciones('Ajuste fino');
+    resto.forEach(n => fino.querySelector('.mo-cuerpo').append(n));
+    der.append(
+      CK.fxSimple.bloque({
+        e: f,
+        variantes: (variantes[f.id] = variantes[f.id] || []),
+        editar: (nombre, fn, final) => {
+          enMacro = true;
+          try {
+            ed(nombre, fn, final);
+          } finally {
+            enMacro = false;
+          }
+          reiniciar();
+        },
+        pintarTodo: () => {
+          pintarDer();
+          pintarLinea();
+        }
+      }),
+      fino
+    );
+    der.scrollTop = scroll;
+  };
   const pintarTodo = () => {
     pintarIzq();
     pintarLinea();
@@ -2018,7 +2053,7 @@
       [
         'pivot',
         'centrar',
-        'Pivot',
+        'Punto de apoyo',
         'Arrastrá en la vista para mover el pivot: el punto de origen del efecto, el que queda donde lo ponés en el mapa. Es solo dónde se muestra acá; no cambia el efecto.'
       ],
       [
@@ -2089,6 +2124,7 @@
     cv.addEventListener('pointerdown', alArrastrar);
     CK.on('datos', g => {
       if (g === 'fx') {
+        completar();
         if (!FX()) st.id = Object.keys(CK.P.fx)[0] || null;
         reiniciar();
         if (CK.seccionVisible('fx')) pintarTodo();

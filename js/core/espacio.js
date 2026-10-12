@@ -522,7 +522,16 @@
     cont.refrescar = pintar;
     cont.ir = id => {
       if (!suelta(id)) act = id;
+      // apiladas: se abre esa y se va hasta ella
+      if (st._apilado && st._cerradas && st._cerradas[id]) {
+        st._cerradas[id] = false;
+        guardar();
+      }
       pintar();
+      if (st._apilado) {
+        const s = cuerpo.querySelector('[data-pila="' + id + '"]');
+        if (s) s.scrollIntoView({ block: 'start' });
+      }
     };
     cont.actual = () => act;
     cont.visible = id => act === id || suelta(id) || !!st._apilado;

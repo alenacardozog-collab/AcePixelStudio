@@ -120,6 +120,14 @@
               })
             ),
             'Ancho y alto del cuadro de un personaje. Los de CastleKnight vienen en cuadros de 100 × 100.'
+          ),
+          CK.campo(
+            'Alto del héroe',
+            CK.num(e.altoHeroe || 30, { min: 8, max: 200 }, v => {
+              e.altoHeroe = v;
+              cambio();
+            }),
+            'Cuánto mide el héroe en el juego, en píxeles (lo visible, no el cuadro). Con esto se sugieren los tamaños al crear.'
           )
         ),
         h(

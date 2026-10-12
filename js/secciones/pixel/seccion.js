@@ -23,6 +23,25 @@
     Px.cuadrosEl.style.gridColumn = '2';
     Px.cuadrosEl.style.gridRow = '2';
     Px.vista = CK.vista(Px.lienzo, { pintar: Px.pintar, herramienta: Px.herramienta, zoom: 8 });
+    // Info del asset: botón abajo a la izquierda, encima de la tira de cuadros
+    tablero.append(
+      h(
+        'div.sobre.abajo',
+        h(
+          'div.tira',
+          CK.btn({
+            ico: 'info',
+            txt: 'Info del asset',
+            cls: 'chico plano',
+            desc: 'Nombre, tipo, tamaño, cuadros, carpeta, fechas y en qué mapas se usa.',
+            on: () => {
+              const a = Px.A();
+              if (a) CK.ventana({ titulo: a.nombre, cuerpo: CK.asset.ficha(a) });
+            }
+          })
+        )
+      )
+    );
     tablero.append(
       h(
         'div.sobre.abajo.der',
@@ -50,6 +69,15 @@
           desc: 'Capas del dibujo con opacidad.',
           pintar: c => {
             if (Px.A()) Px.pCapas(c);
+          }
+        },
+        {
+          id: 'enmapa',
+          txt: 'Prueba',
+          ico: 'mapa',
+          desc: 'Tu dibujo en el mapa, al lado del héroe y a la escala del juego, mientras lo dibujás.',
+          pintar: c => {
+            if (Px.A()) CK.sugerencias.panelVivo(c, () => Px.S.id);
           }
         },
         {
@@ -131,6 +159,10 @@
         Px.ponerSel(new Uint8Array(f.w * f.h).fill(1));
         return true;
       }
+      if (k === 'delete' || k === 'backspace') {
+        Px.vaciarLienzo();
+        return true;
+      }
       if (k === 'd') {
         Px.soltarFlot();
         Px.sel = null;
@@ -195,7 +227,7 @@
       const d = e.shiftKey ? 8 : 1;
       Px.tr.cx += k === 'arrowleft' ? -d : k === 'arrowright' ? d : 0;
       Px.tr.cy += k === 'arrowup' ? -d : k === 'arrowdown' ? d : 0;
-      Px.aplicarTr();
+      Px.aplicarTrLuego();
       return true;
     }
     if (k.startsWith('arrow') && (Px.sel || Px.flot)) {
@@ -239,9 +271,18 @@
     crear,
     mostrar,
     tecla,
+    // atajos "de resorte": mantener la tecla usa la herramienta y al soltar vuelve a la anterior
+    herrTecla: k => (Px.A() ? (Px.HERR.find(x => x.tecla && x.tecla.length === 1 && x.tecla.toLowerCase() === k) || {}).id : null),
+    herrActual: () => Px.S.herr,
+    volverHerr: id => Px.ponerHerr(id),
     ocultar: () => {
       Px.soltarFlot();
       clearInterval(Px.vigia);
+    },
+    // antes de preguntar por cambios sin aplicar: fija lo que estaba flotando (selección movida o transformada)
+    antesDePreguntar: () => {
+      if (Px.tr) Px.terminarTr();
+      Px.soltarFlot();
     },
     alCambiarProyecto: () => {
       Px.S.id = null;

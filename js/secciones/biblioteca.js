@@ -18,7 +18,8 @@
     ['personajes', 'Personajes', 'persona'],
     ['fx', 'Efectos (FX)', 'fx'],
     ['mapas', 'Mapas', 'mapa'],
-    ['tiles', 'Tiles y texturas', 'mosaico']
+    ['tiles', 'Tiles y texturas', 'mosaico'],
+    ['luces', 'Luces', 'luz']
   ];
   const clave = it => it.grupo + ':' + it.id;
 
@@ -114,6 +115,21 @@
         mapa: m
       })
     );
+    Object.values(CK.P.luces || {}).forEach(l =>
+      out.push({
+        grupo: 'luces',
+        id: l.id,
+        nombre: l.nombre || l.id,
+        cat: 'luces',
+        carpeta: l.carpeta || '',
+        etiquetas: l.etiquetas || [],
+        fecha: l.modificado || l.creado || 0,
+        peso: 0,
+        meta:
+          'Luz · ' + (CK.luces.FORMAS.find(f => f[0] === (l.p.forma || 'punto')) || [0, 'Redonda'])[1] + ' · alcance ' + (l.p.radio || 48),
+        luz: l
+      })
+    );
     Object.values(CK.P.poses || {}).forEach(p => {
       const ids = [];
       Object.values(p.acciones || {}).forEach(f =>
@@ -162,6 +178,7 @@
   // ---------------------------------------------------------------- miniaturas
   const mini = (it, tam, i) => {
     if (it.fx) return fxMini(it.fx, tam);
+    if (it.luz) return CK.luces.mini(it.luz.p, tam);
     if (it.mapa) return CK.mini(mapaMini(it.mapa), tam);
     const c = it.img && it.img();
     return c ? CK.mini(c, tam, it.cuadro ? it.cuadro(i || 0) : null) : CK.lienzo(tam, tam);
@@ -208,7 +225,19 @@
   };
 
   // ---------------------------------------------------------------- acciones
+  /** Modificar: lo abre en su sección con la barra de Guardar cambios / Guardar como nuevo / Descartar. */
+  const modificar = (it, e) => {
+    if (it.grupo === 'luces') return CK.luces.ventanaEditar(it.id);
+    const d = CK.edicion.destinos(it.grupo, it.id);
+    if (d.length > 1 && e)
+      return CK.menu(
+        e,
+        [{ titulo: 'Modificar en…' }].concat(d.map(x => ({ txt: x.txt, ico: x.ico, on: () => CK.edicion.empezar(it.grupo, it.id, x) })))
+      );
+    CK.edicion.empezar(it.grupo, it.id, d[0]);
+  };
   const abrir = it => {
+    if (it.grupo === 'luces') return CK.luces.ventanaEditar(it.id);
     if (it.grupo === 'assets') {
       const a = CK.P.assets[it.id];
       if (a.cuadros && CK.asset.nCuadros(a) > 1) CK.ir('anim', { asset: it.id });
@@ -335,9 +364,14 @@
         '-',
         { txt: 'Borrar ' + varios.length, ico: 'basura', peligro: true, on: () => borrar(varios) }
       ]);
-    if (it.grupo === 'assets') return CK.menuAsset(it.id, e, [{ txt: 'Abrir', ico: 'ok', tecla: 'Doble clic', on: () => abrir(it) }]);
+    if (it.grupo === 'assets')
+      return CK.menuAsset(it.id, e, [
+        { txt: 'Modificar…', ico: 'lapiz', on: () => modificar(it, e) },
+        { txt: 'Abrir', ico: 'ok', tecla: 'Doble clic', on: () => abrir(it) }
+      ]);
     CK.menu(e, [
       { titulo: it.nombre },
+      { txt: 'Modificar…', ico: 'lapiz', on: () => modificar(it, e) },
       { txt: 'Abrir', ico: 'ok', tecla: 'Doble clic', on: () => abrir(it) },
       '-',
       { txt: 'Renombrar…', ico: 'texto', on: () => renombrar(it) },
@@ -540,13 +574,23 @@
     grid.classList.toggle('grande', st.tam === 'grande');
     if (!l.length) {
       grid.append(
-        h(
-          'div.nota-txt',
-          { style: { gridColumn: '1 / -1', padding: '20px' } },
-          st.q
-            ? 'Nada coincide con "' + st.q + '".'
-            : 'No hay nada acá todavía. Lo que hagas en las otras secciones (dibujos, animaciones, efectos, mapas) aparece solo.'
-        )
+        st.q
+          ? h('div.nota-txt', { style: { gridColumn: '1 / -1', padding: '20px' } }, 'Nada coincide con "' + st.q + '".')
+          : h(
+              'div',
+              { style: { gridColumn: '1 / -1' } },
+              CK.vacio(
+                'assets',
+                'Tu biblioteca está vacía',
+                'Acá aparece solo todo lo que hagas: dibujos, animaciones, efectos, mapas y tiles, ordenado por categoría. Podés empezar importando imágenes o abriendo el proyecto de ejemplo desde Inicio.',
+                h(
+                  'div.fila',
+                  { style: { justifyContent: 'center' } },
+                  CK.btn({ ico: 'importar', txt: 'Importar imágenes', cls: 'pri', on: () => CK.importarImagenes('sprite') }),
+                  CK.btn({ ico: 'pixel', txt: 'Dibujar algo', on: () => CK.ir('pixel') })
+                )
+              )
+            )
       );
       return;
     }
@@ -596,7 +640,22 @@
             'span.bib-meta',
             it.carpeta && st.carpeta === null ? it.carpeta : CATS.find(c => c[0] === it.cat)[1].replace(/ \(FX\)| y texturas/, '')
           ),
-          it.n > 1 ? h('span.marca-t', String(it.n)) : null
+          it.n > 1 ? h('span.marca-t', String(it.n)) : null,
+          it.grupo !== 'poses' || CK.edicion.destinos(it.grupo, it.id).length
+            ? h(
+                'button.bib-mod',
+                {
+                  type: 'button',
+                  onclick: e => {
+                    e.stopPropagation();
+                    modificar(it, e);
+                  },
+                  ondblclick: e => e.stopPropagation()
+                },
+                h('span', { html: CK.ico('lapiz', 13) }),
+                'Modificar'
+              )
+            : null
         );
       CK.tip(t, it.nombre, it.meta + (it.carpeta ? ' · carpeta ' + it.carpeta : '') + '. Doble clic: abrir. Clic derecho: opciones.');
       grid.append(t);
@@ -657,6 +716,18 @@
           const a = CK.P.assets[id];
           return a && CK.img[id] ? { img: CK.img[id], n: CK.asset.nCuadros(a), cuadro: k => CK.asset.cuadro(a, k) } : null;
         });
+        x.restore();
+        return;
+      }
+      if (it.luz) {
+        x.fillStyle = '#15161c';
+        x.fillRect(0, 0, T, T);
+        x.save();
+        const E = CK.luces.extension(Object.assign({ forma: 'punto' }, it.luz.p)),
+          k = (T * 0.46) / Math.max(8, E);
+        x.translate(T / 2, T / 2);
+        x.scale(k, k);
+        CK.luces.dibujar(x, Object.assign({ forma: 'punto' }, it.luz.p), now, 0, 0);
         x.restore();
         return;
       }
@@ -749,9 +820,25 @@
         'div.bloque',
         h(
           'div.fila',
-          CK.btn({ ico: 'ok', txt: 'Abrir', cls: 'chico pri', on: () => abrir(it) }),
+          CK.btn({
+            ico: 'lapiz',
+            txt: 'Modificar',
+            cls: 'chico pri',
+            desc: 'Lo abre en su sección para cambiarlo. Al terminar elegís guardar los cambios o guardarlo como uno nuevo.',
+            on: e => modificar(it, e)
+          }),
+          CK.btn({ ico: 'ok', txt: 'Abrir', cls: 'chico', on: () => abrir(it) }),
           it.grupo !== 'poses' ? CK.btn({ ico: 'duplicar', txt: 'Duplicar', cls: 'chico', on: () => duplicar(it) }) : null,
           it.grupo === 'assets' ? CK.btn({ ico: 'importar', txt: 'PNG', cls: 'chico', on: () => CK.asset.bajar(it.id) }) : null,
+          it.grupo === 'assets'
+            ? CK.btn({
+                ico: 'mapa',
+                txt: 'Ver en el mapa',
+                cls: 'chico',
+                desc: 'Cómo se ve en el juego, al lado del héroe.',
+                on: () => CK.sugerencias.verEnMapa(it.id)
+              })
+            : null,
           CK.btn({ ico: 'basura', txt: 'Borrar', cls: 'chico peligro', on: () => borrar([it]) })
         )
       )
@@ -805,6 +892,13 @@
       {
         style: { padding: '10px 12px', borderBottom: '1px solid var(--linea)', background: 'var(--panel)', gap: '8px', flexWrap: 'nowrap' }
       },
+      CK.btn({
+        ico: 'mas',
+        txt: 'Crear nuevo',
+        cls: 'pri',
+        desc: 'Elegí qué vas a hacer (personaje, árbol, casa, tile…), mirá el tamaño sugerido al lado del héroe y empezá a dibujarlo.',
+        on: () => CK.sugerencias.crearNuevo()
+      }),
       buscarEl,
       h('span.crece'),
       h('span.nota-txt', 'Ordenar'),
@@ -898,6 +992,23 @@
       return true;
     }
     return false;
+  };
+  CK.biblioteca = {
+    miniFx: fxMini,
+    /** Deja elegido un elemento (y su categoría a la vista). */
+    elegir: (grupo, id) => {
+      const it = items().find(x => x.grupo === grupo && x.id === id);
+      if (!it) return;
+      if (st.cat !== 'todo' && st.cat !== it.cat) st.cat = it.cat;
+      st.carpeta = null;
+      st.sel = clave(it);
+      st.multi.clear();
+      if (CK.seccionVisible('biblioteca')) mostrar();
+    },
+    modificar: (grupo, id) => {
+      const it = items().find(x => x.grupo === grupo && x.id === id);
+      if (it) modificar(it);
+    }
   };
   CK.registrar({
     id: 'biblioteca',

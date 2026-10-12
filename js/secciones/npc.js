@@ -116,7 +116,7 @@
             )
       ),
       h(
-        'div.bloque',
+        'div.bloque.avanzado',
         h('h3.bloque-tit', 'Traer y llevar'),
         h(
           'div.fila',

@@ -183,6 +183,54 @@
     if (a.carpeta) n.carpeta = a.carpeta;
     return n;
   };
+  /** Resumen de un asset en una línea (tipo, tamaño, cuadros); con o = el objeto del mapa, también su tamaño escalado. */
+  CK.asset.info = (a, o) => {
+    if (!a) return '';
+    const n = CK.asset.nCuadros(a),
+      fw = a.cuadros ? a.cuadros.fw : a.w,
+      fh = a.cuadros ? a.cuadros.fh : a.h,
+      partes = [CK.asset.TIPOS[a.tipo] || a.tipo, fw + '×' + fh + ' px'];
+    if (n > 1) partes.push(n + ' cuadros' + (a.cuadros.fps ? ' a ' + a.cuadros.fps + ' por seg.' : ''));
+    if (o && ((o.sx && Math.abs(o.sx) !== 1) || (o.sy && Math.abs(o.sy) !== 1)))
+      partes.push('en el mapa ' + Math.round(fw * Math.abs(o.sx || 1)) + '×' + Math.round(fh * Math.abs(o.sy || 1)));
+    if (o && o.rot) partes.push('girado ' + o.rot + '°');
+    return partes.join(' · ');
+  };
+  /** Ficha del asset: nombre, tipo, tamaño, cuadros, carpeta, fechas, origen y en qué mapas se usa. */
+  CK.asset.ficha = a => {
+    if (!a) return CK.h('div');
+    const n = CK.asset.nCuadros(a),
+      mapas = new Set();
+    let usos = 0;
+    Object.values(CK.P.mapas).forEach(m =>
+      CK.mapa.objetosDe(m).forEach(o => {
+        if (o.asset === a.id) {
+          usos++;
+          mapas.add(m.nombre);
+        }
+      })
+    );
+    const fila = (k, v) => (v ? CK.h('div.ficha-fila', CK.h('span', k), CK.h('b', v)) : null);
+    return CK.h(
+      'div.ficha',
+      fila('Nombre', a.nombre),
+      fila('Tipo', CK.asset.TIPOS[a.tipo] || a.tipo),
+      fila('Tamaño', a.w + ' × ' + a.h + ' px' + (a.cuadros ? ' (cuadro ' + a.cuadros.fw + ' × ' + a.cuadros.fh + ')' : '')),
+      n > 1
+        ? fila(
+            'Cuadros',
+            n + (a.cuadros.fps ? ' · ' + a.cuadros.fps + ' por segundo' : '') + (a.cuadros.bucle === false ? ' · una vez' : ' · en loop')
+          )
+        : null,
+      fila('Carpeta', a.carpeta),
+      fila('Etiquetas', (a.etiquetas || []).join(', ')),
+      fila('Creado', a.creado ? CK.fecha(a.creado) : ''),
+      fila('Cambiado', a.modificado ? CK.fecha(a.modificado) : ''),
+      fila('Origen', a.origen),
+      fila('En mapas', usos ? usos + ' vez/veces · ' + [...mapas].join(', ') : 'ninguno'),
+      fila('Id', a.id)
+    );
+  };
   CK.asset.renombrar = async id => {
     const a = CK.P.assets[id];
     if (!a) return;

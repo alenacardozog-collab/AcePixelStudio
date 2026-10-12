@@ -3,7 +3,7 @@
 'use strict';
 (function () {
   const h = CK.h;
-  let el, panel, centro, acciones, cvA, cvB, infoA, infoB, lista;
+  let el, panel, centro, acciones, cvA, cvB, infoA, infoB, lista, vacioC;
   const st = { fuente: null, res: null, cfg: null, gotero: false };
   const cfg = () => {
     if (!st.cfg)
@@ -64,6 +64,7 @@
     if (!cvA) return;
     const a = st.fuente && CK.img[st.fuente];
     dibujarEn(cvA, a, infoA, a ? 'Referencia · ' + a.width + ' × ' + a.height + ' px' : 'Subí o elegí una referencia');
+    if (vacioC) vacioC(!a);
     if (st.res) {
       const s = PIX.stats(st.res, CK.P.estilo.paleta);
       dibujarEn(
@@ -713,6 +714,21 @@
       bCmp
     );
     el.append(panel, centro);
+    vacioC = CK.vacioSobre(
+      centro,
+      'convertir',
+      'Pasá una imagen a pixel art',
+      'Subí una foto, un dibujo o una referencia: el editor le saca el fondo, la lleva a tu tamaño y a tu paleta, y queda lista como asset. También podés soltar el archivo acá.',
+      CK.btn({
+        ico: 'importar',
+        txt: 'Subir referencia',
+        cls: 'pri',
+        on: async () => {
+          const as = await CK.importarImagenes('ref');
+          if (as.length) CK.ir('convertir', as[0].id);
+        }
+      })
+    );
     cvA.addEventListener('click', e => {
       if (!st.gotero || !st.fuente) return;
       const r = cvA.getBoundingClientRect(),

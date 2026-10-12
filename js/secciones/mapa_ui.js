@@ -15,7 +15,7 @@
       tip: 'Seleccionar y mover',
       desc: 'Clic para elegir un objeto, arrastrá para moverlo. Las asas blancas lo escalan y la azul lo rota. Arrastrá en vacío para elegir varios. Ctrl + arrastrar lo duplica.',
       tecla: 'V',
-      est: 'Clic: elegir · Arrastrar: mover · Mayús + clic: sumar · Alt + clic: uno solo del grupo'
+      est: 'Clic: elegir · Arrastrar: mover · Mayús + clic: sumar · Alt + clic: uno solo del grupo · Asas: escalar (Mayús libre, Ctrl desde el centro, Alt de a 25 %) · Asa azul: girar (Mayús de a 1°)'
     },
     {
       id: 'colocar',
@@ -61,6 +61,7 @@
     },
     {
       id: 'balde-zona',
+      avanzada: true,
       ico: 'bloquear',
       tip: 'Rellenar zona',
       desc: 'Rellena de una vez un área cerrada con el tipo de zona elegido.',
@@ -201,9 +202,14 @@
       if (tabs.actual() === 'capas' || tabs.suelta('capas')) refPanel();
     });
     CK.on('mapa-tiles', () => tabs.refrescar());
+    // al elegir algo (en el lienzo o en la lista de capas) se va directo a sus Propiedades
+    let ultimaSel = '';
     CK.on('mapa-sel', () => {
+      const clave = S.sel.join(',') + '|' + (S.selCol || '') + '|' + (S.selNota || '');
+      const cambio = clave !== ultimaSel;
+      ultimaSel = clave;
       if ((S.sel.length || S.selCol || S.selNota) && S.herr !== 'colocar') {
-        if (tabs.actual() !== 'prop' && tabs.actual() !== 'capas') tabs.ir('prop');
+        if (cambio && !tabs.suelta('prop')) tabs.ir('prop');
         else refPanel();
       } else if (S.herr !== 'colocar') refPanel();
     });
@@ -650,6 +656,40 @@
           CK.btn({ ico: 'subir', tip: 'Traer adelante', desc: 'Sube la capa: se dibuja por encima.', cls: 'chico', on: () => mover(1) }),
           CK.btn({ ico: 'bajar', tip: 'Enviar atrás', desc: 'Baja la capa: se dibuja por debajo.', cls: 'chico', on: () => mover(-1) }),
           CK.btn({
+            ico: 'limpiar',
+            tip: 'Vaciar capa',
+            desc: 'Deja la capa activa vacía (sin terreno, tiles u objetos) pero la conserva. Se puede deshacer.',
+            cls: 'chico',
+            on: async () => {
+              const cp = MP.capaAct();
+              if (!cp) return;
+              if (
+                !(await CK.confirmar(
+                  'Vaciar capa',
+                  'Se quita todo lo que tiene "' + cp.nombre + '". La capa queda. Se puede deshacer.',
+                  'Vaciar'
+                ))
+              )
+                return;
+              const f = MP.fin('Vaciar capa');
+              if (cp.tipo === 'objetos') {
+                const ids = new Set(cp.objetos.map(o => o.id));
+                cp.objetos = [];
+                // las colisiones ancladas a esos objetos se van con ellos
+                if (m.colisiones) m.colisiones = m.colisiones.filter(k => !k.ancla || !ids.has(k.ancla));
+                MP.elegir([]);
+              } else {
+                const r = MP.datosCapa(cp);
+                r.arr.fill(0);
+                r.sucio = true;
+                MP.guardarCapa(cp);
+              }
+              f();
+              MP.invalidar(cp.id);
+              tabs.refrescar();
+            }
+          }),
+          CK.btn({
             ico: 'basura',
             tip: 'Borrar capa',
             desc: 'Elimina la capa activa con todo su contenido.',
@@ -703,6 +743,38 @@
         )
       );
       c.append(h('div.bloque', h('h3.bloque-tit', 'Objetos de la capa'), listaObjetos(cp)));
+      const cols = M().colisiones || [];
+      if (cols.length)
+        c.append(
+          h(
+            'div.bloque',
+            h('h3.bloque-tit', 'Colisiones del mapa'),
+            h(
+              'div.lista',
+              { style: { maxHeight: '200px', overflowY: 'auto' } },
+              cols.map((k, i) => {
+                const o = k.ancla && MP.objetosDe(M(), true).find(q => q.id === k.ancla);
+                return h(
+                  'div.item' + (S.selCol === k.id ? '.activo' : ''),
+                  {
+                    onclick: () => {
+                      S.selCol = k.id;
+                      S.sel = [];
+                      S.selNota = null;
+                      vista.centrarEn(k.x + k.w / 2, k.y + k.h / 2);
+                      CK.emit('mapa-sel');
+                      MP.pedir();
+                    },
+                    ondblclick: () => renombrarCol(k)
+                  },
+                  h('span', { html: CK.ico('colision', 16) }),
+                  h('span.nombre', k.nombre || 'Colisión ' + (i + 1)),
+                  k.ancla ? h('span.etq' + (o ? '' : '.oro'), o ? '⚓ ' + nombreObj(o) : '⚓ suelta') : null
+                );
+              })
+            )
+          )
+        );
     } else {
       const a = CK.P.assets[cp.tileset];
       const elegirTs = async () => {
@@ -1044,6 +1116,27 @@
   const nombreObj = o =>
     o.nombre ||
     (o.tipo === 'luz' ? 'Luz' : o.tipo === 'punto' ? MP.PUNTOS[o.clase][0] : (CK.P.assets[o.asset] || {}).nombre || o.clave || 'Objeto');
+  /** Renombrar cualquier cosa del mapa (doble clic en la lista, o el campo Nombre en Propiedades). */
+  const renombrarObj = async o => {
+    const n = await CK.pedir('Renombrar', 'Nombre', o.nombre || nombreObj(o));
+    if (n === null || n === undefined) return;
+    const f = MP.fin('Renombrar');
+    if (n.trim()) o.nombre = n.trim();
+    else delete o.nombre;
+    f();
+    MP.pedir();
+    tabs.refrescar();
+  };
+  const renombrarCol = async k => {
+    const n = await CK.pedir('Renombrar colisión', 'Nombre', k.nombre || '');
+    if (n === null || n === undefined) return;
+    const f = MP.fin('Renombrar colisión');
+    if (n.trim()) k.nombre = n.trim();
+    else delete k.nombre;
+    f();
+    MP.pedir();
+    tabs.refrescar();
+  };
   const listaObjetos = cp => {
     const l = h('div.lista', { style: { maxHeight: '320px', overflowY: 'auto' } });
     if (!cp.objetos.length) {
@@ -1058,7 +1151,8 @@
           onclick: e => {
             MP.elegir(e.shiftKey ? S.sel.concat(o.id) : [o.id]);
             vista.centrarEn(o.x, o.y - 10);
-          }
+          },
+          ondblclick: () => renombrarObj(o)
         },
         o.tipo
           ? h('span', { html: CK.ico(o.tipo === 'luz' ? 'luz' : 'punto', 16) })
@@ -1066,6 +1160,7 @@
         h('span.nombre', nombreObj(o)),
         o.marca ? h('span.etq.' + (o.marca.estado === 'hecha' ? 'verde' : 'oro'), 'anim') : null,
         o.col ? h('span.etq', 'col') : null,
+        (M().colisiones || []).some(k => k.ancla === o.id) ? h('span.etq', '⚓') : null,
         CK.btn({
           ico: o.oculto ? 'ojoNo' : 'ojo',
           tip: o.oculto ? 'Mostrar' : 'Ocultar',
@@ -1163,6 +1258,118 @@
         set(v);
       })
     );
+  // ---------------------------------------------------------------- poner algo de la biblioteca en un punto
+  const NO_PREG = 'ck_mapa_no_ofrecer';
+  const elegirDeBib = async (o, solo) => {
+    const fichas = Object.values(CK.P.npcs),
+      fxs = Object.values(CK.P.fx),
+      assets = Object.values(CK.P.assets).filter(a => ['sprite', 'hoja', 'personaje', 'fx'].includes(a.tipo)),
+      pfs = Object.values(CK.P.prefabs);
+    const pest = [
+      ['luz', 'Luces', 'luz'],
+      ['npc', 'Personajes (NPC)', 'persona'],
+      ['fx', 'Efectos', 'fx'],
+      ['asset', 'Objetos y sprites', 'imagen'],
+      ['prefab', 'Prearmados', 'prefab']
+    ].filter(p => !solo || p[0] === solo);
+    let act = solo || (o.tipo === 'luz' ? 'luz' : o.clase === 'npc' ? 'npc' : o.clase === 'efecto' ? 'fx' : 'asset');
+    const grid = h('div.bib-elegir'),
+      cab = h('div.fila.bib-elegir-pest'),
+      cuerpo = h('div', cab, grid);
+    const tarjeta = (mini, nombre, q, sub) => {
+      const b = h(
+        'button.bib-elegir-t',
+        { type: 'button', onclick: () => cuerpo.closest('.ventana').cerrar(q) },
+        mini,
+        h('span', nombre),
+        sub ? h('small', sub) : null
+      );
+      return b;
+    };
+    const pintar = () => {
+      cab.replaceChildren(
+        ...pest.map(([k, txt, ico]) =>
+          CK.btn({
+            ico,
+            txt,
+            cls: 'chico' + (k === act ? ' activo' : ''),
+            on: () => {
+              act = k;
+              pintar();
+            }
+          })
+        )
+      );
+      const l = [];
+      if (act === 'luz') {
+        CK.luces.guardadas().forEach(s => l.push(tarjeta(CK.luces.mini(s.p, 56), s.nombre, { tipo: 'luz', p: s.p }, 'tuya')));
+        CK.luces.PRESETS.forEach(s => l.push(tarjeta(CK.luces.mini(s.p, 56), s.nombre, { tipo: 'luz', p: s.p })));
+      } else if (act === 'npc')
+        fichas.forEach(n =>
+          l.push(
+            tarjeta(
+              n.retrato && CK.img[n.retrato]
+                ? CK.mini(CK.img[n.retrato], 56, CK.asset.cuadro(CK.P.assets[n.retrato], 0))
+                : CK.lienzo(56, 56),
+              n.nombre,
+              { tipo: 'npc', id: n.id },
+              (n.temas || []).length ? n.temas.length + ' temas' : ''
+            )
+          )
+        );
+      else if (act === 'fx')
+        fxs.forEach(f =>
+          l.push(tarjeta(CK.biblioteca.miniFx(f, 56), f.nombre || f.id, { tipo: 'fx', id: f.id }, f.bucle ? 'en loop' : ''))
+        );
+      else if (act === 'asset')
+        assets.forEach(a => l.push(tarjeta(CK.mini(CK.img[a.id], 56, CK.asset.cuadro(a, 0)), a.nombre, { tipo: 'asset', id: a.id })));
+      else
+        pfs.forEach(p =>
+          l.push(tarjeta(CK.mini(CK.img[(p.objetos.find(x => !x.tipo) || {}).asset], 56), p.nombre, { tipo: 'prefab', id: p.id }))
+        );
+      grid.replaceChildren(
+        ...(l.length
+          ? l
+          : [
+              h(
+                'p.nota-txt',
+                {
+                  npc: 'Todavía no hay personajes. Se crean en la sección NPC.',
+                  fx: 'Todavía no hay efectos. Se crean en la sección FX.',
+                  asset: 'Todavía no hay objetos. Importá imágenes o dibujalos en Pixel art.',
+                  prefab: 'Todavía no hay prearmados: armá un objeto, seleccionalo y usá "Guardar prearmado".'
+                }[act]
+              )
+            ])
+      );
+    };
+    pintar();
+    const extra = solo
+      ? CK.chk(false, 'No preguntar más al colocar', v => {
+          try {
+            if (v) localStorage.setItem(NO_PREG, '1');
+            else localStorage.removeItem(NO_PREG);
+          } catch (e) {}
+        })
+      : null;
+    if (extra) cuerpo.append(h('div', { style: { marginTop: '8px' } }, extra));
+    const q = await CK.ventana({
+      titulo: solo ? '¿Qué ponés en este punto?' : 'Poner de la biblioteca',
+      ancho: 640,
+      cuerpo,
+      botones: [{ txt: solo ? 'Dejarlo vacío' : 'Cancelar', valor: null }]
+    });
+    if (q) MP.ponerDeBib(q, o);
+  };
+  /** Después de colocar un punto de NPC o de efecto: si ya hay hechos, se ofrecen ahí mismo. */
+  CK.mapa.ofrecerBib = o => {
+    try {
+      if (localStorage.getItem(NO_PREG)) return;
+    } catch (e) {}
+    if (o.clase === 'npc' && Object.keys(CK.P.npcs).length) elegirDeBib(o, 'npc');
+    else if (o.clase === 'efecto' && Object.keys(CK.P.fx).length) elegirDeBib(o, 'fx');
+  };
+  MP.elegirDeBib = elegirDeBib;
   const pintarProp = c => {
     const m = M();
     if (!m) return;
@@ -1176,22 +1383,110 @@
             v => {
               const f = MP.fin('Ajustar colisión');
               k[campo] = v;
+              MP.reanclar(k);
               f();
               MP.pedir();
             },
             campo === 'w' || campo === 'h' ? { min: 1 } : {}
           );
+        const dueno = k.ancla && MP.objetosDe(m, true).find(o => o.id === k.ancla),
+          nombreDe = o => (o ? o.nombre || (CK.P.assets[o.asset] || {}).nombre || 'objeto' : ''),
+          debajo = MP.objetoDebajo(m, k.x + k.w / 2, k.y + k.h / 2);
+        const anclaBloque = h(
+          'div.bloque',
+          h('h3.bloque-tit', '⚓ Anclada a un objeto'),
+          dueno
+            ? h(
+                'div',
+                h('p.nota-txt', 'Va con «' + nombreDe(dueno) + '»: si lo movés, lo escalás, lo espejás o lo girás, la colisión lo sigue.'),
+                h(
+                  'div.fila',
+                  CK.btn({
+                    ico: 'seleccionar',
+                    txt: 'Ver el objeto',
+                    cls: 'chico',
+                    on: () => {
+                      S.selCol = null;
+                      MP.elegir([dueno.id]);
+                    }
+                  }),
+                  CK.btn({
+                    ico: 'cerrar',
+                    txt: 'Desanclar',
+                    cls: 'chico',
+                    desc: 'La colisión queda fija en el mapa, donde está ahora.',
+                    on: () => {
+                      const f = MP.fin('Desanclar colisión');
+                      MP.desanclarCol(k);
+                      f();
+                      tabs.refrescar();
+                      MP.pedir();
+                    }
+                  })
+                )
+              )
+            : k.ancla
+              ? h('p.nota-txt', 'Su objeto se borró: la colisión quedó suelta y no se exporta. Desanclala para conservarla o borrala.')
+              : h(
+                  'div',
+                  h('p.nota-txt', 'Está fija en el mapa. Anclada, se mueve con el objeto.'),
+                  debajo
+                    ? CK.btn({
+                        ico: 'ok',
+                        txt: 'Anclar a «' + nombreDe(debajo) + '»',
+                        cls: 'chico pri',
+                        on: () => {
+                          const f = MP.fin('Anclar colisión');
+                          MP.anclarCol(k, debajo);
+                          f();
+                          tabs.refrescar();
+                          MP.pedir();
+                        }
+                      })
+                    : h('p.nota-txt', 'No hay ningún objeto debajo de su centro para anclarla.')
+                ),
+          k.ancla && !dueno
+            ? CK.btn({
+                txt: 'Desanclar',
+                cls: 'chico',
+                on: () => {
+                  const f = MP.fin('Desanclar colisión');
+                  MP.desanclarCol(k);
+                  f();
+                  tabs.refrescar();
+                }
+              })
+            : null,
+          CK.chk(MP.S.colAnclar, 'Las colisiones nuevas se anclan al objeto de abajo', v => {
+            MP.S.colAnclar = v;
+            try {
+              localStorage.setItem('ck_col_anclar', v ? '1' : '0');
+            } catch (e) {}
+          })
+        );
         c.append(
           h(
             'div.bloque',
             h('h3.bloque-tit', { html: CK.ico('colision', 16) }, 'Colisión'),
+            CK.campo(
+              'Nombre',
+              CK.txt(k.nombre || '', v => {
+                const f = MP.fin('Renombrar colisión');
+                if (v) k.nombre = v;
+                else delete k.nombre;
+                f();
+                MP.pedir();
+              })
+            ),
             h('div.duo', ed('x'), ed('y'), ed('w'), ed('h')),
+            h('p.nota-txt', 'En el lienzo: arrastrala para moverla y tirá de las asas blancas para cambiarle el tamaño.'),
             h(
               'div.fila',
               { style: { marginTop: '10px' } },
               CK.btn({ ico: 'basura', txt: 'Borrar', cls: 'peligro', tecla: 'Supr', on: MP.borrarSel })
             )
-          )
+          ),
+          anclaBloque
         );
         return;
       }
@@ -1264,7 +1559,22 @@
       h(
         'div.crece',
         h('b', uno ? nombreObj(o) : objs.length + ' objetos'),
-        h('div.nota-txt', uno ? (o.tipo ? '' : a ? a.w + '×' + a.h + ' px' : 'sin imagen') : 'Los cambios se aplican a todos')
+        h(
+          'div.nota-txt',
+          uno
+            ? o.tipo
+              ? o.tipo === 'luz'
+                ? 'Luz · ' +
+                  (CK.luces.FORMAS.find(f => f[0] === (o.forma || 'punto')) || [0, 'Redonda'])[1] +
+                  ' · alcance ' +
+                  o.radio +
+                  ' px'
+                : 'Punto · ' + MP.PUNTOS[o.clase][0]
+              : a
+                ? CK.asset.info(a, o)
+                : 'sin imagen'
+            : 'Los cambios se aplican a todos'
+        )
       )
     );
     const b = h('div.bloque', cab);
@@ -1307,54 +1617,28 @@
       )
     );
     c.append(b);
-    if (o.tipo === 'luz') {
+    if (uno && o.tipo)
       c.append(
         h(
           'div.bloque',
-          h('h3.bloque-tit', 'Luz'),
-          CK.campo(
-            'Color',
-            CK.color(o.color, v => {
-              objs.forEach(x => {
-                x.color = v;
-              });
-              MP.pedir();
-              CK.tocar();
-            })
-          ),
-          CK.campo(
-            'Radio',
-            CK.rango(o.radio, { min: 8, max: 300 }, (v, f) => {
-              objs.forEach(x => {
-                x.radio = v;
-              });
-              MP.pedir();
-              if (f) CK.tocar();
-            })
-          ),
-          CK.campo(
-            'Intensidad',
-            CK.rango(Math.round(o.fuerza * 100), { min: 5, max: 100 }, (v, f) => {
-              objs.forEach(x => {
-                x.fuerza = v / 100;
-              });
-              MP.pedir();
-              if (f) CK.tocar();
-            })
-          ),
-          CK.campo(
-            'Parpadeo',
-            CK.rango(o.parpadeo || 0, { min: 0, max: 4 }, (v, f) => {
-              objs.forEach(x => {
-                x.parpadeo = v;
-              });
-              MP.revisarBucle();
-              MP.pedir();
-              if (f) CK.tocar();
-            }),
-            '0 = luz fija. Más alto = titila como una llama.'
-          )
+          CK.btn({
+            ico: 'assets',
+            txt: o.tipo === 'luz' ? 'Usar una luz tuya o poner algo acá…' : 'Poner algo de la biblioteca acá…',
+            cls: 'chico',
+            desc: 'Elegí de lo que ya hiciste (luces guardadas, personajes, efectos, objetos o prearmados) para ponerlo en este lugar.',
+            on: () => elegirDeBib(o)
+          })
         )
+      );
+    if (o.tipo === 'luz') {
+      c.append(
+        CK.luces.panel({
+          objs: objs.filter(x => x.tipo === 'luz'),
+          mapa: M().id,
+          pedir: MP.pedir,
+          refrescar: () => tabs.refrescar(),
+          bucle: MP.revisarBucle
+        })
       );
     } else if (o.tipo === 'punto') {
       const pb = h(
@@ -2304,7 +2588,11 @@
           pre('Día', '#ffffff', 0),
           pre('Atardecer', '#ffb070', 0.35),
           pre('Noche', '#2a3270', 0.62),
-          pre('Interior', '#6a5540', 0.4)
+          pre('Interior', '#6a5540', 0.4),
+          pre('Noche cerrada', '#0e1022', 0.75),
+          pre('Cueva', '#0d0b14', 0.8),
+          pre('Tormenta', '#3a4a66', 0.45),
+          pre('Bosque', '#2a4a3a', 0.3)
         ),
         CK.campo(
           'Tono',
@@ -2503,6 +2791,10 @@
     crear,
     mostrar,
     tecla,
+    // atajos "de resorte": mantener la tecla usa la herramienta y al soltar vuelve a la anterior
+    herrTecla: k => (M() ? (HERR.find(x => x.tecla && x.tecla.toLowerCase() === k) || {}).id : null),
+    herrActual: () => S.herr,
+    volverHerr: id => MP.herr(id),
     alCambiarProyecto: () => {
       S.id = null;
       S.sel = [];

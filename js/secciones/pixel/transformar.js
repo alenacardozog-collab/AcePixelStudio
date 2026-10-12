@@ -6,39 +6,37 @@
 
   // ---------------------------------------------------------------- transformación libre (rotar, escalar, voltear)
   Px.tr = null;
-  /** Escala ×2 que respeta los bordes del pixel art (Scale2x / EPX). Con tres pasadas queda ×8 para rotar limpio (idea de RotSprite). */
-  const scale2x = im => {
-    const W = im.w,
-      H = im.h,
-      o = PIX.make(W * 2, H * 2),
-      d = im.d,
-      igual = (a, b) => d[a] === d[b] && d[a + 1] === d[b + 1] && d[a + 2] === d[b + 2] && d[a + 3] === d[b + 3];
-    for (let y = 0; y < H; y++)
-      for (let x = 0; x < W; x++) {
-        const P = (y * W + x) * 4,
-          A = y > 0 ? P - W * 4 : P,
-          B = x < W - 1 ? P + 4 : P,
-          C = x > 0 ? P - 4 : P,
-          D = y < H - 1 ? P + W * 4 : P;
-        const e = [
-          igual(C, A) && !igual(C, D) && !igual(A, B) ? A : P,
-          igual(A, B) && !igual(A, C) && !igual(B, D) ? B : P,
-          igual(D, C) && !igual(D, B) && !igual(C, A) ? C : P,
-          igual(B, D) && !igual(B, A) && !igual(D, C) ? D : P
-        ];
-        [
-          [0, 0],
-          [1, 0],
-          [0, 1],
-          [1, 1]
-        ].forEach(([ox, oy], k) => {
-          const q = ((y * 2 + oy) * W * 2 + x * 2 + ox) * 4;
-          for (let c = 0; c < 4; c++) o.d[q + c] = d[e[k] + c];
-        });
-      }
-    return o;
+  /** Caja de la selección (o de lo flotante) en píxeles del cuadro, para mostrar sus asas sin entrar a Transformar. */
+  Px.cajaSel = () => {
+    if (Px.flot) {
+      const b = Px.cajaMascara(Px.flot.m, Px.flot.c.width, Px.flot.c.height);
+      return b && { x: b.x + Px.flot.x, y: b.y + Px.flot.y, w: b.w, h: b.h };
+    }
+    return Px.sel ? Px.sel.b : null;
   };
-  Px.empezarTr = () => {
+  /** Asas de una caja sin girar (las mismas posiciones que las de Transformar). */
+  Px.manijasCaja = (v, b) => {
+    const P = (x, y) => ({ x: v.tx + x * v.z, y: v.ty + y * v.z }),
+      l = [];
+    [-1, 0, 1].forEach(hx =>
+      [-1, 0, 1].forEach(hy => {
+        if (hx || hy) l.push(Object.assign(P(b.x + ((hx + 1) * b.w) / 2, b.y + ((hy + 1) * b.h) / 2), { hx, hy }));
+      })
+    );
+    const arriba = P(b.x + b.w / 2, b.y);
+    return { l, arriba, rot: { x: arriba.x, y: arriba.y - 22, rot: true } };
+  };
+  /** ¿El mouse está sobre un asa (de la transformación en curso, o de la selección)? */
+  Px.asaEn = m => {
+    const v = Px.vista,
+      b = !Px.tr && Px.cajaSel();
+    if (!Px.tr && !b) return null;
+    const mj = Px.tr ? Px.manijasTr(v) : Px.manijasCaja(v, b),
+      cerca = q => Math.hypot(q.x - m.sx, q.y - m.sy) <= 8;
+    if (cerca(mj.rot)) return mj.rot;
+    return mj.l.find(cerca) || null;
+  };
+  Px.empezarTr = o => {
     if (!Px.doc) return;
     const f = Px.FR();
     if (!Px.flot) {
@@ -46,11 +44,12 @@
         const m = new Uint8Array(f.w * f.h).fill(1);
         Px.sel = { m, b: { x: 0, y: 0, w: f.w, h: f.h } };
       }
-      Px.levantar();
+      Px.levantar('Transformar');
     }
     const fd = CK.ctx(Px.flot.c).getImageData(0, 0, Px.flot.c.width, Px.flot.c.height).data,
       mm = Px.flot.m.map((v, i) => (v && fd[i * 4 + 3] > 0 ? 1 : 0)); // solo lo que tiene dibujo
-    const b = Px.cajaMascara(mm, Px.flot.c.width, Px.flot.c.height);
+    // desde las asas de la selección: la caja es la de la selección (así el asa queda donde la agarraste)
+    const b = mm.some(v => v) ? Px.cajaMascara(o && o.caja === 'sel' ? Px.flot.m : mm, Px.flot.c.width, Px.flot.c.height) : null;
     if (!b) {
       CK.aviso('No hay nada dibujado para transformar.', 'info');
       return;
@@ -69,14 +68,104 @@
       ang: 0,
       suave: !!Px.S.trSuave,
       ocho: null,
+      borde: detectarBorde(im),
       antes: { c: CK.copiaLienzo(Px.flot.c), m: Px.flot.m.slice(), x: Px.flot.x, y: Px.flot.y }
     };
     Px.pintarTira();
     Px.pedir();
   };
+  /* CONTORNO: al girar un dibujo con contorno de 1 píxel, muestrear el contorno lo rompe (huecos, tramos dobles,
+     esquinas comidas) porque una línea de 1 píxel no sobrevive a una grilla girada. Si el borde de afuera es casi todo
+     de un mismo color, se saca antes de girar, se gira solo el relleno y después se vuelve a dibujar un contorno
+     limpio de 1 píxel alrededor. Con giros rectos y escalas enteras no hace falta (se copia exacto). */
+  const detectarBorde = im => {
+    const { w, h: H, d } = im,
+      u = new Uint32Array(d.buffer, d.byteOffset, w * H),
+      op = i => d[i * 4 + 3] >= 8,
+      cuenta = new Map(),
+      borde = [];
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        if (!op(i)) continue;
+        if (x === 0 || y === 0 || x === w - 1 || y === H - 1 || !op(i - 1) || !op(i + 1) || !op(i - w) || !op(i + w)) {
+          borde.push(i);
+          cuenta.set(u[i], (cuenta.get(u[i]) || 0) + 1);
+        }
+      }
+    if (borde.length < 8) return null;
+    let col = 0,
+      n = 0;
+    cuenta.forEach((v, k) => {
+      if (v > n) {
+        n = v;
+        col = k;
+      }
+    });
+    if (n / borde.length < 0.7) return null;
+    const sin = { w, h: H, d: new Uint8ClampedArray(d) },
+      su = new Uint32Array(sin.d.buffer, 0, w * H);
+    borde.forEach(i => {
+      if (u[i] === col) su[i] = 0;
+    });
+    return { col, sin };
+  };
+  /** Dibuja un contorno de 1 píxel (vecinos en cruz) alrededor de lo opaco: queda fino y sin dobles en las diagonales. */
+  const rehacerBorde = (o32, m, W, H, col) => {
+    const nuevos = [];
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x;
+        if (m[i]) continue;
+        if ((x > 0 && m[i - 1]) || (x < W - 1 && m[i + 1]) || (y > 0 && m[i - W]) || (y < H - 1 && m[i + W])) nuevos.push(i);
+      }
+    nuevos.forEach(i => {
+      o32[i] = col;
+      m[i] = 1;
+    });
+  };
+  /** Saca píxeles del relleno girado que quedaron sueltos (sin ningún vecino en cruz): el contorno los convertiría en granitos. */
+  const limpiarSueltos = (o32, m, W, H) => {
+    const fuera = [];
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x;
+        if (!m[i]) continue;
+        const n =
+          (x > 0 && m[i - 1] ? 1 : 0) + (x < W - 1 && m[i + 1] ? 1 : 0) + (y > 0 && m[i - W] ? 1 : 0) + (y < H - 1 && m[i + W] ? 1 : 0);
+        if (n === 0) fuera.push(i);
+      }
+    fuera.forEach(i => {
+      o32[i] = 0;
+      m[i] = 0;
+    });
+  };
   /** Rehace el flotante a partir del original con la escala y el giro actuales (vecino más cercano: no inventa colores). */
-  Px.aplicarTr = () => {
+  /* Mientras se arrastra una manija se usa el vecino más cercano (rápido: un recorrido por píxel, con pasos sumados por fila)
+     y se dibuja una vez por cuadro de pantalla. El giro limpio (RotSprite, pesado) se calcula una sola vez al soltar. */
+  let cuadroPend = 0,
+    finalPend = 0;
+  Px.aplicarTrVivo = () => {
+    if (cuadroPend) return;
+    cuadroPend = requestAnimationFrame(() => {
+      cuadroPend = 0;
+      Px.aplicarTr(true);
+    });
+  };
+  /** Con flechas o botones seguidos: rápido ya, y el limpio cuando se deja de tocar. */
+  Px.aplicarTrLuego = () => {
+    Px.aplicarTr(true);
+    clearTimeout(finalPend);
+    finalPend = setTimeout(() => Px.aplicarTr(), 220);
+  };
+  Px.aplicarTr = rapido => {
     if (!Px.tr || !Px.flot) return;
+    if (!rapido) {
+      cancelAnimationFrame(cuadroPend);
+      cuadroPend = 0;
+      clearTimeout(finalPend);
+      finalPend = 0;
+    }
     const { bw, bh, sx, sy, ang } = Px.tr,
       co = Math.cos(ang),
       si = Math.sin(ang),
@@ -84,38 +173,60 @@
       hh = (bh * Math.abs(sy)) / 2;
     const ex = Math.abs(hw * co) + Math.abs(hh * si),
       ey = Math.abs(hw * si) + Math.abs(hh * co);
-    const x0 = Math.floor(Px.tr.cx - ex + 1e-6),
-      y0 = Math.floor(Px.tr.cy - ey + 1e-6),
-      x1 = Math.ceil(Px.tr.cx + ex - 1e-6),
-      y1 = Math.ceil(Px.tr.cy + ey - 1e-6),
+    // giro recto y escala entera: se copia exacto; si no, con contorno se gira solo el relleno y el borde se redibuja
+    const recto = Math.abs(Math.sin(ang * 2)) < 1e-6 && Number.isInteger(Math.abs(sx)) && Number.isInteger(Math.abs(sy)),
+      borde = Px.tr.borde && !recto && Px.S.trBorde !== false ? Px.tr.borde : null,
+      pad = borde ? 1 : 0,
+      x0 = Math.floor(Px.tr.cx - ex + 1e-6) - pad,
+      y0 = Math.floor(Px.tr.cy - ey + 1e-6) - pad,
+      x1 = Math.ceil(Px.tr.cx + ex - 1e-6) + pad,
+      y1 = Math.ceil(Px.tr.cy + ey - 1e-6) + pad,
       W = Math.max(1, x1 - x0),
-      H = Math.max(1, y1 - y0);
-    const recto = Math.abs(Math.round(ang / (Math.PI / 2)) * (Math.PI / 2) - ang) < 1e-4,
-      suave = Px.tr.suave && !recto;
-    if (suave && !Px.tr.ocho) Px.tr.ocho = scale2x(scale2x(scale2x(Px.tr.im)));
-    const src = suave ? Px.tr.ocho : Px.tr.im,
-      K = suave ? 8 : 1,
-      out = new ImageData(W, H),
+      H = Math.max(1, y1 - y0),
+      fuente = borde ? borde.sin : Px.tr.im;
+    let out, m;
+    if (Px.tr.suave && !rapido) {
+      // limpio: RotSprite (×8 respetando bordes y voto de color); con giros rectos y escalas enteras copia exacto
+      const r = PIX.transformarEn(fuente, { ang, sx, sy, cx: Px.tr.cx, cy: Px.tr.cy, x0, y0, W, H });
+      out = new ImageData(r.d, W, H);
+      m = r.m;
+    } else {
+      // vecino más cercano: u y v avanzan sumando un paso fijo por columna (sin senos ni divisiones por píxel)
+      const src = fuente,
+        sw = src.w,
+        sh = src.h,
+        clave = borde ? 's32b' : 's32',
+        s32 = Px.tr[clave] || (Px.tr[clave] = new Uint32Array(src.d.buffer, src.d.byteOffset, sw * sh));
+      out = new ImageData(W, H);
       m = new Uint8Array(W * H);
-    for (let y = 0; y < H; y++)
-      for (let x = 0; x < W; x++) {
-        const dx = x0 + x + 0.5 - Px.tr.cx,
-          dy = y0 + y + 0.5 - Px.tr.cy,
-          u = (dx * co + dy * si) / sx + bw / 2,
-          v = (-dx * si + dy * co) / sy + bh / 2;
-        if (u < 0 || v < 0 || u >= bw || v >= bh) continue;
-        const px = Math.min(src.w - 1, Math.floor(u * K)),
-          py = Math.min(src.h - 1, Math.floor(v * K)),
-          i = (py * src.w + px) * 4;
-        if (src.d[i + 3] < 8) continue;
-        const o = (y * W + x) * 4;
-        out.data[o] = src.d[i];
-        out.data[o + 1] = src.d[i + 1];
-        out.data[o + 2] = src.d[i + 2];
-        out.data[o + 3] = src.d[i + 3];
-        m[y * W + x] = 1;
+      const o32 = new Uint32Array(out.data.buffer),
+        du = co / sx,
+        dv = -si / sy,
+        ox = Px.tr.cx,
+        oy = Px.tr.cy;
+      for (let y = 0; y < H; y++) {
+        const dx0 = x0 + 0.5 - ox,
+          dy = y0 + y + 0.5 - oy;
+        let u = (dx0 * co + dy * si) / sx + bw / 2,
+          v = (-dx0 * si + dy * co) / sy + bh / 2;
+        const fila = y * W;
+        for (let x = 0; x < W; x++, u += du, v += dv) {
+          if (u < 0 || v < 0 || u >= bw || v >= bh) continue;
+          const px = s32[(v < sh ? v | 0 : sh - 1) * sw + (u < sw ? u | 0 : sw - 1)];
+          if (px >>> 24 < 8) continue;
+          o32[fila + x] = px;
+          m[fila + x] = 1;
+        }
       }
-    const c = CK.lienzo(W, H);
+    }
+    if (borde) {
+      const o32 = new Uint32Array(out.data.buffer);
+      limpiarSueltos(o32, m, W, H);
+      rehacerBorde(o32, m, W, H, borde.col);
+    }
+    // el lienzo del flotante se reusa si el tamaño no cambió (no se crea uno nuevo por cada movimiento del mouse)
+    let c = Px.flot.c;
+    if (!c || c.width !== W || c.height !== H || c === (Px.tr.antes && Px.tr.antes.c)) c = CK.lienzo(W, H);
     CK.ctx(c).putImageData(out, 0, 0);
     Px.flot.c = c;
     Px.flot.m = m;
@@ -125,6 +236,9 @@
     Px.pedir();
   };
   Px.cancelarTr = () => {
+    cancelAnimationFrame(cuadroPend);
+    cuadroPend = 0;
+    clearTimeout(finalPend);
     if (!Px.tr || !Px.flot) {
       Px.tr = null;
       return;
@@ -140,6 +254,8 @@
   };
   Px.terminarTr = () => {
     if (!Px.tr) return;
+    if (cuadroPend || finalPend) Px.aplicarTr(); // quedaba una vista rápida pendiente: se fija la final
+    finalPend = 0;
     Px.tr = null;
     Px.pintarTira();
     Px.pedir();
@@ -220,7 +336,8 @@
         sgy = Math.sign(b.sy) || 1;
       let nw = t.hx ? Math.max(1, Math.round((lx - t.O.x) * t.hx)) : Px.tr.bw * Math.abs(b.sx),
         nh = t.hy ? Math.max(1, Math.round((ly - t.O.y) * t.hy)) : Px.tr.bh * Math.abs(b.sy);
-      if (m.shift && t.hx && t.hy) {
+      // las esquinas mantienen la forma (proporción); con Mayús se estira libre
+      if (!m.shift && t.hx && t.hy) {
         const k = Math.max(nw / (Px.tr.bw * Math.abs(b.sx)), nh / (Px.tr.bh * Math.abs(b.sy)));
         nw = Math.max(1, Math.round(Px.tr.bw * Math.abs(b.sx) * k));
         nh = Math.max(1, Math.round(Px.tr.bh * Math.abs(b.sy) * k));
@@ -235,7 +352,7 @@
         'Tamaño: ' + nw + ' × ' + nh + ' px (' + Math.round((nw / Px.tr.bw) * 100) + '% × ' + Math.round((nh / Px.tr.bh) * 100) + '%)'
       );
     }
-    Px.aplicarTr();
+    Px.aplicarTrVivo();
   };
   /** Cambios rápidos sobre la transformación (girar, voltear, escalar) — la empiezan si hace falta. */
   Px.trRapido = fn => {
@@ -304,11 +421,11 @@
         }),
         CK.chk(
           d.suave,
-          'Giro limpio para pixel art (RotSprite)',
+          'Suavizar líneas (RotSprite)',
           v => {
             d.suave = v;
           },
-          'Agranda ×8 respetando los bordes antes de girar: las líneas inclinadas quedan sin dientes raros. Solo cambia algo en ángulos que no son de 90°.'
+          'Agranda ×8 respetando los bordes antes de girar: suaviza líneas inclinadas largas, pero redondea las esquinas de los dibujos chicos. Solo cambia algo en ángulos que no son de 90°.'
         ),
         h('p.nota-txt', 'Nunca inventa colores: cada píxel nuevo copia uno del original.')
       ),
@@ -347,6 +464,7 @@
       hay ? { txt: 'Cortar', ico: 'recortar', tecla: 'Ctrl + X', on: () => Px.copiar(true) } : null,
       { txt: 'Pegar', ico: 'duplicar', tecla: 'Ctrl + V', off: !Px.portaSel, on: Px.pegar },
       hay ? { txt: 'Borrar lo seleccionado', ico: 'basura', tecla: 'Supr', on: Px.borrarSel } : null,
+      hay ? null : { txt: 'Vaciar el lienzo', ico: 'basura', tecla: 'Ctrl + Supr', on: () => Px.vaciarLienzo() },
       '-',
       { txt: 'Transformar libre', ico: 'escalar', tecla: 'T', on: () => Px.ponerHerr('transformar') },
       {
@@ -462,7 +580,16 @@
       },
       { txt: 'Transformar con números…', ico: 'ajustes', on: Px.trNumeros },
       {
-        txt: 'Giro limpio (RotSprite)',
+        txt: 'Rehacer el contorno al girar',
+        ico: 'contorno',
+        activo: Px.S.trBorde !== false,
+        on: () => {
+          Px.S.trBorde = Px.S.trBorde === false;
+          if (Px.tr) Px.aplicarTr();
+        }
+      },
+      {
+        txt: 'Suavizar líneas (RotSprite, redondea esquinas)',
         ico: 'pixel',
         activo: !!Px.S.trSuave,
         on: () => {

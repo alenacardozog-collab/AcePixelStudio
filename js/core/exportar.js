@@ -120,6 +120,7 @@
   };
   const claveDe = a => J.texDe(a) || 'ed_' + a.id;
   /** Un mapa nuevo en el formato del cargador. */
+  J._variantes = {};
   J.datosNuevo = (m, usados) => {
     const items = [],
       luces = [],
@@ -132,7 +133,13 @@
     CK.mapa.objetosDe(m, true).forEach(o => {
       if (o.oculto) return;
       if (o.tipo === 'luz') {
-        luces.push({ x: Math.round(o.x), y: Math.round(o.y), radio: o.radio, color: o.color, fuerza: o.fuerza, parpadeo: o.parpadeo || 0 });
+        // las luces nuevas (con forma) llevan todo lo que se ajustó; las viejas, lo de siempre
+        luces.push(
+          Object.assign(
+            { x: Math.round(o.x), y: Math.round(o.y), radio: o.radio, color: o.color, fuerza: o.fuerza, parpadeo: o.parpadeo || 0 },
+            o.forma ? CK.luces.props(o) : {}
+          )
+        );
         return;
       }
       if (o.tipo === 'punto') {
@@ -172,6 +179,22 @@
       }
       const a = CK.P.assets[o.asset];
       if (!a) return;
+      // girado, estirado o espejado vertical: el juego no lo sabe hacer, así que va horneado (limpio, sin deformar)
+      if (CK.mapa.pideHorneado(o) && CK.img[a.id]) {
+        const firma = [a.id, a.modificado || 0, o.rot || 0, o.sx || 1, o.sy || 1, o.flipX ? 1 : 0, o.flipY ? 1 : 0].join('|');
+        let h = 0;
+        for (let i = 0; i < firma.length; i++) h = (h * 31 + firma.charCodeAt(i)) >>> 0;
+        const k = 'ed_' + a.id + '_t' + h.toString(36);
+        if (!J._variantes[k]) J._variantes[k] = { o: CK.clone(o), a: a.id };
+        const v = J._variantes[k];
+        if (!v.hecho) v.hecho = CK.mapa.hornearObjeto(o);
+        if (v.hecho) {
+          const ex = { ox: +v.hecho.ox.toFixed(4), oy: +v.hecho.oy.toFixed(4) };
+          if (o.piso) ex.piso = true;
+          items.push([k, Math.round(o.x), Math.round(o.y), 0, v.hecho.n > 1 ? k : '', ex]);
+          return;
+        }
+      }
       usados.add(a.id);
       const it = [
         claveDe(a),
@@ -231,6 +254,7 @@
       },
       imagenes = {};
     const alias = new Set();
+    J._variantes = {};
     Object.values(P.mapas).forEach(m => {
       if (m.origen) {
         D.mapas[m.id] = { nombre: m.nombre, origen: m.origen };
@@ -278,12 +302,39 @@
           bucle: a.cuadros.bucle !== false,
           vaiven: !!a.cuadros.vaiven,
           orden: a.cuadros.orden || null,
+          dur: a.cuadros.dur || null,
+          ev: a.cuadros.ev || null
+        };
+    });
+    // objetos girados / estirados del mapa, horneados limpios
+    Object.keys(J._variantes || {}).forEach(k => {
+      const v = J._variantes[k],
+        a = P.assets[v.a];
+      if (!v.hecho || !a) return;
+      imagenes[k] = v.hecho.c;
+      D.assets[k] = { w: v.hecho.c.width, h: v.hecho.c.height };
+      if (v.hecho.n > 1)
+        D.assets[k].cuadros = {
+          fw: v.hecho.fw,
+          fh: v.hecho.fh,
+          fps: a.cuadros.fps || 8,
+          bucle: a.cuadros.bucle !== false,
+          vaiven: !!a.cuadros.vaiven,
+          orden: a.cuadros.orden || null,
           dur: a.cuadros.dur || null
         };
+    });
+    // eventos por cuadro (sonido, efecto, golpe, aviso) por clave de animación, también para las que reemplazan texturas del juego
+    D.eventos = {};
+    Object.values(P.assets).forEach(a => {
+      if (!a.cuadros || !a.cuadros.ev || !a.cuadros.ev.some(Boolean)) return;
+      D.eventos[J.texDe(a) || 'ed_' + a.id] = a.cuadros.ev;
     });
     // las partículas que usan un asset lo nombran por su clave de textura
     Object.values(D.fx).forEach(f => {
       D.fx[f.id] = CK.clone(f);
+      delete D.fx[f.id].base; // datos de los controles principales del editor: el juego no los necesita
+      delete D.fx[f.id].macro;
       D.fx[f.id].capas.forEach(c => {
         if (c.figura === 'asset' && P.assets[c.asset]) c.asset = claveDe(P.assets[c.asset]);
       });
@@ -380,6 +431,76 @@
     return true;
   };
 
+  // ---------------------------------------------------------------- qué cambia desde la última exportación
+  const hashTxt = t => {
+    let x = 2166136261;
+    for (let i = 0; i < t.length; i++) x = Math.imul(x ^ t.charCodeAt(i), 16777619);
+    return (x >>> 0).toString(36);
+  };
+  const hashImg = c => {
+    try {
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let x = 2166136261 ^ c.width ^ (c.height << 12);
+      for (let i = 0; i < d.length; i += 4) x = Math.imul(x ^ (d[i] | (d[i + 1] << 8) | (d[i + 2] << 16) | (d[i + 3] << 24)), 16777619);
+      return (x >>> 0).toString(36);
+    } catch (e) {
+      return '?';
+    }
+  };
+  /** Firma de cada cosa que se exporta: imágenes, mapas, NPC, efectos y misiones. */
+  J.firmas = pk => {
+    const f = {};
+    Object.keys(pk.imagenes).forEach(k => (f['img:' + k] = hashImg(pk.imagenes[k])));
+    Object.keys(pk.datos.mapas || {}).forEach(k => (f['mapa:' + k] = hashTxt(JSON.stringify(pk.datos.mapas[k]))));
+    Object.keys(pk.datos.npcs || {}).forEach(k => (f['npc:' + k] = hashTxt(JSON.stringify(pk.datos.npcs[k]))));
+    Object.keys(pk.datos.fx || {}).forEach(k => (f['fx:' + k] = hashTxt(JSON.stringify(pk.datos.fx[k]))));
+    (pk.datos.misiones || []).forEach((m, i) => (f['mision:' + (m.id || i)] = hashTxt(JSON.stringify(m))));
+    return f;
+  };
+  const NOMBRE_TIPO = { img: 'Imagen', mapa: 'Mapa', npc: 'NPC', fx: 'Efecto', mision: 'Misión' };
+  const nombreDe = k => {
+    const [t, id] = [k.slice(0, k.indexOf(':')), k.slice(k.indexOf(':') + 1)];
+    const P = CK.P,
+      n =
+        t === 'img'
+          ? (P.assets[id.replace(/^ed_/, '')] || {}).nombre || id
+          : t === 'mapa'
+            ? (P.mapas[id] || {}).nombre || id
+            : t === 'npc'
+              ? (P.npcs[id] || {}).nombre || id
+              : t === 'fx'
+                ? (P.fx[id] || {}).nombre || id
+                : ((P.misiones || []).find(m => m.id === id) || {}).nombre || id;
+    return (NOMBRE_TIPO[t] || t) + ': ' + n;
+  };
+  /** Compara con la última exportación: { nuevos, cambiados, quitados, iguales }. */
+  J.cambios = pk => {
+    const ahora = J.firmas(pk),
+      antes = (CK.P.ultimaExportacion && CK.P.ultimaExportacion.firmas) || null,
+      r = { nuevos: [], cambiados: [], quitados: [], iguales: 0, primera: !antes };
+    Object.keys(ahora).forEach(k => {
+      if (!antes || !(k in antes)) r.nuevos.push(k);
+      else if (antes[k] !== ahora[k]) r.cambiados.push(k);
+      else r.iguales++;
+    });
+    if (antes) Object.keys(antes).forEach(k => !(k in ahora) && r.quitados.push(k));
+    r.firmas = ahora;
+    return r;
+  };
+  const listaCambios = (titulo, ks, cls) =>
+    ks.length
+      ? CK.h(
+          'details.cambios' + (cls ? '.' + cls : ''),
+          ks.length <= 6 ? { open: true } : {},
+          CK.h('summary', titulo + ' (' + ks.length + ')'),
+          CK.h(
+            'ul',
+            ks.slice(0, 60).map(k => CK.h('li', nombreDe(k))),
+            ks.length > 60 ? CK.h('li', '… y ' + (ks.length - 60) + ' más') : null
+          )
+        )
+      : null;
+
   J.ventanaExportar = async function () {
     if (!CK.P) return;
     const d = CK.fs.dir('juego'),
@@ -439,6 +560,52 @@
       );
     const pk = J.paquete(),
       nImg = Object.keys(pk.imagenes).length;
+    // revisar antes de escribir: qué cambia y qué conviene arreglar
+    const cb = J.cambios(pk);
+    cuerpo.append(
+      CK.seccion(
+        'Qué va a cambiar en el juego',
+        cb.primera
+          ? CK.h('p.ayuda-txt', 'Es la primera exportación de este proyecto: se escribe todo.')
+          : !cb.nuevos.length && !cb.cambiados.length && !cb.quitados.length
+            ? CK.h('p.ayuda-txt', 'Nada cambió desde la última exportación (' + CK.fecha(CK.P.ultimaExportacion.t) + ').')
+            : CK.h('p.ayuda-txt', 'Desde la última exportación (' + CK.fecha(CK.P.ultimaExportacion.t) + '):'),
+        cb.primera ? null : listaCambios('Nuevo', cb.nuevos, 'nuevo'),
+        cb.primera ? null : listaCambios('Cambiado', cb.cambiados, 'cambiado'),
+        cb.primera ? null : listaCambios('Ya no está', cb.quitados, 'quitado'),
+        !cb.primera && cb.iguales ? CK.h('p.nota-txt', cb.iguales + ' cosa(s) quedan igual.') : null
+      )
+    );
+    let probs = [];
+    try {
+      probs = CK.revisar ? CK.revisar().filter(p => p.nivel !== 'leve') : [];
+    } catch (e) {}
+    if (probs.length)
+      cuerpo.append(
+        CK.seccion(
+          'Para revisar antes (' + probs.length + ')',
+          CK.h('p.ayuda-txt', 'No impiden exportar, pero conviene mirarlos. Clic en uno para ir a arreglarlo.'),
+          CK.h(
+            'div',
+            { style: { maxHeight: '180px', overflowY: 'auto' } },
+            probs.slice(0, 30).map(p =>
+              CK.h(
+                'div.problema.' + p.nivel,
+                {
+                  html: CK.ico('alerta', 16),
+                  style: { cursor: p.ir ? 'pointer' : '' },
+                  onclick: () => {
+                    if (!p.ir) return;
+                    cuerpo.closest('.ventana').cerrar(false);
+                    p.ir();
+                  }
+                },
+                CK.h('div', CK.h('div.pt', p.titulo), CK.h('div.pd', p.detalle || ''))
+              )
+            )
+          )
+        )
+      );
     cuerpo.append(
       CK.seccion(
         'Qué se exporta',
@@ -517,6 +684,9 @@
             ';\n'
         );
         await CK.fs.escribir(d, 'js/maps/data/editor_assets.js', textoImagenes(pk.imagenes));
+        try {
+          CK.P.ultimaExportacion = { t: Date.now(), firmas: J.firmas(pk) };
+        } catch (e) {}
         const html = await CK.fs.texto(d, 'index.html');
         if (html && html.includes(MARCA)) {
           const n = J.parchearIndex(html, Date.now().toString(36));
@@ -600,7 +770,17 @@
       if (anim) it.push(anim);
       items.push(it);
     });
-    const cols = (m.colisiones || []).map(k => [Math.round(k.x), Math.round(k.y), Math.round(k.w), Math.round(k.h)]);
+    // colisiones ancladas: van donde está su objeto (y no van si el objeto se borró o está oculto)
+    if (CK.mapa.sincronizarCols) CK.mapa.sincronizarCols(m);
+    const ocultos = new Set(
+      CK.mapa
+        .objetosDe(m, true)
+        .filter(o => o.oculto)
+        .map(o => o.id)
+    );
+    const cols = (m.colisiones || [])
+      .filter(k => !k.huerfana && !(k.ancla && ocultos.has(k.ancla)))
+      .map(k => [Math.round(k.x), Math.round(k.y), Math.round(k.w), Math.round(k.h)]);
     CK.mapa.objetosDe(m).forEach(o => {
       if (o.col && !o.oculto) {
         const r = CK.mapa.colDe(o);
@@ -614,18 +794,27 @@
     return { items, cols, alias: [...alias], nuevos: [...nuevos] };
   };
   /** Probar: si el juego ya tiene el cargador, exporta primero y abre el juego en el mapa que se está editando. */
-  J.probar = async function () {
-    if (!CK.P) return;
-    let url = CK.P.juego.url || '../prueba/index.html';
-    const q = [];
+  let ultimoMapa = null; // el último mapa abierto en la sección Mapa: Probar empieza ahí aunque estés en otra sección
+  CK.on('mapa-abierto', () => {
     const m = CK.mapa && CK.mapa.actual && CK.mapa.actual();
-    if (m && CK.seccionVisible('mapa')) {
+    if (m) ultimoMapa = m.id;
+  });
+  /** Dirección del juego con el punto de partida (mapa y lugar) y una marca para que no use lo guardado en caché. */
+  J.direccionPrueba = function () {
+    let url = (CK.P && CK.P.juego && CK.P.juego.url) || '../prueba/index.html';
+    const q = [];
+    const m = CK.P && (CK.P.mapas[ultimoMapa] || (CK.mapa && CK.mapa.actual && CK.mapa.actual()));
+    if (m) {
       q.push('ck_zona=' + encodeURIComponent(m.origen ? m.origen.clave.split('.').pop() : m.id));
-      const c = CK.mapa.centroVista();
+      const c = CK.mapa.centroVista && CK.seccionVisible('mapa') ? CK.mapa.centroVista() : null;
       if (c) q.push('ck_x=' + Math.round(c.x), 'ck_y=' + Math.round(c.y));
     }
     q.push('ck_t=' + Date.now());
-    url += (url.includes('?') ? '&' : '?') + q.join('&');
+    return new URL(url + (url.includes('?') ? '&' : '?') + q.join('&'), location.href).href;
+  };
+  J.probar = async function () {
+    if (!CK.P) return;
+    const url = J.direccionPrueba();
     const w = window.open('about:blank', 'castleknight_prueba');
     if (!w) {
       CK.aviso('El navegador bloqueó la pestaña nueva. Permití las ventanas emergentes para este archivo.', 'error', 6000);
@@ -637,7 +826,7 @@
     } catch (e) {
       console.warn(e);
     }
-    w.location.href = new URL(url, location.href).href;
+    w.location.href = url;
     CK.estado(
       'Juego abierto en otra pestaña' +
         (exp ? ' con lo último exportado.' : '. No exporté: falta conectar la carpeta del juego o instalar el cargador.')

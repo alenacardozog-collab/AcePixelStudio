@@ -384,4 +384,269 @@
       return nuevas.length;
     }
   };
+
+  // ---------------------------------------------------------------- bordes automáticos con cualquier tileset
+  // El editor pinta el suelo con 16 piezas "de esquinas" (como las de Texturas → Bordes): pieza i tiene terreno en
+  // la esquina sup-izq si !(i&1), sup-der si !(i&2), inf-izq si !(i&4), inf-der si !(i&8). La 0 es llena y la 15 vacía.
+  const ESQ = i => [!(i & 1), !(i & 2), !(i & 4), !(i & 8)];
+  TL.ESQ = ESQ;
+  /**
+   * RPG Maker (autotile A2): un bloque de 2 × 3 tiles. Arriba a la derecha, las esquinas interiores; abajo, un 2 × 2
+   * con bordes y esquinas exteriores. Cada pieza de salida se arma con cuatro cuartos de tile.
+   */
+  TL.desdeRPGMaker = (im, t, bx, by) => {
+    const m = t / 2,
+      out = PIX.make(t * 4, t * 4);
+    const cuarto = (col, fila) => PIX.crop(im, bx + col * m, by + fila * m, m, m);
+    for (let i = 0; i < 16; i++) {
+      const c = ESQ(i).map(Number),
+        px = (i % 4) * t,
+        py = Math.floor(i / 4) * t;
+      [
+        [0, 0],
+        [1, 0],
+        [0, 1],
+        [1, 1]
+      ].forEach(([qx, qy]) => {
+        const k = qy * 2 + qx,
+          v = c[k],
+          hz = c[qy * 2 + (1 - qx)],
+          vt = c[(1 - qy) * 2 + qx],
+          dg = c[(1 - qy) * 2 + (1 - qx)];
+        if (!v) return;
+        let col, fila;
+        if (!hz && !vt) {
+          col = qx === 0 ? 3 : 0;
+          fila = qy === 0 ? 5 : 2;
+        } else if (hz && !vt) {
+          col = qx === 0 ? 1 : 2;
+          fila = qy === 0 ? 5 : 2;
+        } else if (!hz && vt) {
+          col = qx === 0 ? 3 : 0;
+          fila = qy === 0 ? 3 : 4;
+        } else if (dg) {
+          col = qx === 0 ? 1 : 2;
+          fila = qy === 0 ? 3 : 4;
+        } else {
+          col = qx === 0 ? 3 : 2;
+          fila = qy === 0 ? 1 : 0;
+        }
+        PIX.blit(out, cuarto(col, fila), px + qx * m, py + qy * m, false);
+      });
+    }
+    return out;
+  };
+  /** Adivina qué pieza de un tileset corresponde a cada una de las 16 (mirando qué esquinas tienen dibujo). */
+  TL.adivinar16 = piezas => {
+    const t = piezas[0] ? piezas[0].w : 16,
+      r = Math.max(1, Math.round(t / 8));
+    const opaco = (p, x0, y0) => {
+      let n = 0,
+        tot = 0;
+      for (let y = y0; y < y0 + r; y++)
+        for (let x = x0; x < x0 + r; x++) {
+          tot++;
+          if (p.d[(y * p.w + x) * 4 + 3] > 128) n++;
+        }
+      return n / tot > 0.5;
+    };
+    const firma = p => [opaco(p, 0, 0), opaco(p, t - r, 0), opaco(p, 0, t - r), opaco(p, t - r, t - r)];
+    const fs = piezas.map(firma),
+      asig = [];
+    for (let i = 0; i < 16; i++) {
+      const c = ESQ(i);
+      if (i === 15) {
+        asig.push(-1);
+        continue;
+      }
+      const k = fs.findIndex(f => f.every((v, j) => v === c[j]));
+      asig.push(k);
+    }
+    return asig;
+  };
+  /** Arma el atlas de 16 piezas con la asignación elegida (-1 = vacía). */
+  TL.armar16 = (piezas, asig, t) => {
+    const out = PIX.make(t * 4, t * 4);
+    asig.forEach((k, i) => {
+      if (k >= 0 && piezas[k]) PIX.blit(out, piezas[k], (i % 4) * t, Math.floor(i / 4) * t, false);
+    });
+    return out;
+  };
+  const dibujoEsquinas = i => {
+    const c = CK.lienzo(18, 18),
+      x = CK.ctx(c);
+    x.fillStyle = '#2a2d33';
+    x.fillRect(0, 0, 18, 18);
+    ESQ(i).forEach((v, k) => {
+      x.fillStyle = v ? '#e8b83a' : '#3e434b';
+      x.fillRect((k % 2) * 9 + 1, Math.floor(k / 2) * 9 + 1, 7, 7);
+    });
+    return c;
+  };
+  /** Ventana: elegir el formato y asignar piezas. Crea un tileset de bordes (16 piezas) listo para una capa de Terreno. */
+  TL.armarBordes = async id => {
+    const a = CK.P.assets[id];
+    if (!a) return null;
+    const t = TL.lado(a),
+      im = CK.asset.pix(id),
+      piezas = TL.piezas(id),
+      cols = TL.cols(a);
+    const st = {
+      formato: im.w >= t * 2 && im.h >= t * 3 && /rpg|a2|auto/i.test(a.nombre) ? 'rpg' : 'mano',
+      bx: 0,
+      by: 0,
+      asig: TL.adivinar16(piezas),
+      slot: 0
+    };
+    const k = Math.max(1, Math.min(6, Math.floor(Math.min(480 / im.w, 360 / im.h)))) || 1;
+    const hoja = CK.lienzo(im.w * k, im.h * k),
+      vista = CK.lienzo(t * 4 * 3, t * 4 * 3);
+    hoja.className = 'bordes-hoja';
+    vista.className = 'bordes-vista';
+    const slots = CK.h('div.bordes-slots');
+    const ayuda = CK.h('p.nota-txt');
+    const resultado = () => (st.formato === 'rpg' ? TL.desdeRPGMaker(im, t, st.bx, st.by) : TL.armar16(piezas, st.asig, t));
+    const pintar = () => {
+      const x = CK.ctx(hoja);
+      CK.cuadros(x, hoja.width, hoja.height, 8);
+      x.imageSmoothingEnabled = false;
+      x.drawImage(CK.img[id], 0, 0, hoja.width, hoja.height);
+      x.strokeStyle = 'rgba(255,255,255,.15)';
+      for (let gx = 0; gx <= im.w; gx += t) x.strokeRect(gx * k + 0.5, 0, 0, hoja.height);
+      for (let gy = 0; gy <= im.h; gy += t) x.strokeRect(0, gy * k + 0.5, hoja.width, 0);
+      x.strokeStyle = '#e8b83a';
+      x.lineWidth = 2;
+      if (st.formato === 'rpg') x.strokeRect(st.bx * k + 1, st.by * k + 1, t * 2 * k - 2, t * 3 * k - 2);
+      else
+        st.asig.forEach((p, i) => {
+          if (p < 0) return;
+          x.strokeStyle = i === st.slot ? '#e8b83a' : 'rgba(232,184,58,.35)';
+          x.strokeRect((p % cols) * t * k + 1, Math.floor(p / cols) * t * k + 1, t * k - 2, t * k - 2);
+        });
+      // vista previa: el atlas y un pedacito de suelo con una mancha
+      const at = CK.aLienzo(resultado()),
+        v = CK.ctx(vista),
+        n = 12,
+        tt = (t * 4 * 3) / n;
+      v.imageSmoothingEnabled = false;
+      v.fillStyle = '#4c7a3a';
+      v.fillRect(0, 0, vista.width, vista.height);
+      const g = (i, j) => ((i - 5.5) ** 2 / 14 + (j - 5.5) ** 2 / 9 < 1 || (j === 3 && i > 6) ? 1 : 0);
+      for (let j = 0; j < n; j++)
+        for (let i = 0; i < n; i++) {
+          const p = PIX.wangIndex(g(i, j), g(i + 1, j), g(i, j + 1), g(i + 1, j + 1));
+          if (p === 15) continue;
+          v.drawImage(at, (p % 4) * t, Math.floor(p / 4) * t, t, t, i * tt, j * tt, tt, tt);
+        }
+      CK.vaciar(slots);
+      if (st.formato === 'mano')
+        for (let i = 0; i < 16; i++) {
+          const p = st.asig[i],
+            b = CK.h(
+              'button.borde-slot' + (i === st.slot ? '.activo' : '') + (p < 0 && i !== 15 ? '.falta' : ''),
+              {
+                type: 'button',
+                onclick: () => {
+                  st.slot = i;
+                  pintar();
+                }
+              },
+              dibujoEsquinas(i),
+              p >= 0 ? CK.mini(CK.aLienzo(piezas[p]), 26) : CK.h('span.borde-vacia', i === 15 ? 'vacía' : '?')
+            );
+          CK.tip(
+            b,
+            'Pieza ' + (i + 1),
+            'Los cuadraditos dorados son las esquinas con terreno. Elegila y hacé clic en la pieza que corresponde en la hoja.'
+          );
+          slots.append(b);
+        }
+      ayuda.textContent =
+        st.formato === 'rpg'
+          ? 'Hacé clic en el bloque de 2 × 3 tiles del autotile que querés usar (el recuadro dorado). Las 16 piezas se arman solas.'
+          : 'Elegí una de las 16 piezas de la derecha (los cuadraditos dorados son las esquinas con terreno) y hacé clic en la que le corresponde en la hoja de la izquierda. "Adivinar" las asigna mirando qué esquinas tienen dibujo. Las que quedan con ? no se usan.';
+    };
+    hoja.addEventListener('click', e => {
+      const r = hoja.getBoundingClientRect(),
+        mx = ((e.clientX - r.left) / r.width) * im.w,
+        my = ((e.clientY - r.top) / r.height) * im.h;
+      if (st.formato === 'rpg') {
+        st.bx = CK.clamp(Math.floor(mx / (t * 2)) * t * 2, 0, Math.max(0, im.w - t * 2));
+        st.by = CK.clamp(Math.floor(my / (t * 3)) * t * 3, 0, Math.max(0, im.h - t * 3));
+      } else {
+        const p = Math.floor(my / t) * cols + Math.floor(mx / t);
+        if (p < piezas.length) {
+          st.asig[st.slot] = p;
+          st.slot = Math.min(15, st.slot + 1);
+        }
+      }
+      pintar();
+    });
+    const fmt = CK.sel(
+      st.formato,
+      [
+        ['mano', 'Asignar las piezas (sirve para hojas de 16 o 47 piezas)'],
+        ['rpg', 'RPG Maker: autotile A2 (bloques de 2 × 3 tiles)']
+      ],
+      v => {
+        st.formato = v;
+        pintar();
+      }
+    );
+    const cuerpo = CK.h(
+      'div.bordes',
+      CK.campo('Formato', fmt),
+      CK.h(
+        'div.bordes-grid',
+        CK.h('div', CK.h('span.mini-rot', 'La hoja "' + a.nombre + '"'), CK.h('div.bordes-hoja-caja', hoja)),
+        CK.h(
+          'div',
+          slots,
+          CK.h('span.mini-rot', 'Así queda pintado'),
+          vista,
+          CK.h(
+            'div.fila',
+            CK.btn({
+              ico: 'varita',
+              txt: 'Adivinar',
+              cls: 'chico',
+              desc: 'Asigna cada pieza mirando qué esquinas tienen dibujo (funciona con hojas de fondo transparente).',
+              on: () => {
+                st.formato = 'mano';
+                fmt.value = 'mano';
+                st.asig = TL.adivinar16(piezas);
+                pintar();
+              }
+            })
+          )
+        )
+      ),
+      ayuda
+    );
+    pintar();
+    const ok = await CK.ventana({
+      titulo: 'Armar bordes automáticos',
+      ancho: Math.min(980, CK.doc().defaultView.innerWidth - 40),
+      cuerpo,
+      botones: [
+        { txt: 'Cancelar', valor: null },
+        { txt: 'Crear tileset de bordes', cls: 'pri', valor: true }
+      ]
+    });
+    if (!ok) return null;
+    const nuevo = CK.asset.crear({
+      nombre: 'bordes_' + a.nombre,
+      tipo: 'tileset',
+      lienzo: CK.aLienzo(resultado()),
+      origen: 'bordes automáticos armados con ' + a.nombre + (st.formato === 'rpg' ? ' (RPG Maker A2)' : ''),
+      tileset: { tile: t, forma: 'wang16', variantes: 0 }
+    });
+    CK.aviso(
+      'Listo: "' + nuevo.nombre + '". En Mapa, elegilo en una capa de Terreno y pintá con el pincel: los bordes salen solos.',
+      'ok',
+      6000
+    );
+    CK.emit('assets');
+    return nuevo.id;
+  };
 })();

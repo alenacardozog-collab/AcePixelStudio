@@ -21,6 +21,10 @@
     let frs = PIX.slice(CK.asset.pix(id), k.fw, k.fh).slice(0, n),
       dur = (k.dur || []).slice(0, n);
     while (dur.length < frs.length) dur.push(0);
+    // los eventos (sonido, efecto, golpe…) viajan pegados a su cuadro cuando se reordena, borra o invierte
+    frs.forEach((f, i) => {
+      if (k.ev && k.ev[i] && k.ev[i].length) f.ev = CK.clone(k.ev[i]);
+    });
     if (k.orden) {
       frs = k.orden.map(i => frs[i]);
       dur = k.orden.map(i => dur[i] || 0);
@@ -29,6 +33,9 @@
     if (r === false || !frs.length) return;
     k.dur = dur.some(Boolean) ? dur.map(v => v || 0) : undefined;
     if (!k.dur) delete k.dur;
+    const ev = frs.map(f => (f.ev && f.ev.length ? f.ev : null));
+    if (ev.some(Boolean)) k.ev = ev;
+    else delete k.ev;
     delete k.orden;
     CK.asset.poner(id, CK.aLienzo(PIX.pack(frs, frs.length)));
     const despuesImg = CK.copiaLienzo(CK.img[id]),
@@ -129,7 +136,9 @@
       if (!s.length) return;
       An.editarHoja('Espejar cuadros', f => {
         s.forEach(i => {
+          const ev = f[i].ev;
           f[i] = PIX.flipH(f[i]);
+          if (ev) f[i].ev = ev;
         });
       });
     },
@@ -260,6 +269,12 @@
       },
       { txt: 'Reemplazar con imagen…', ico: 'importar', off: varios, on: () => An.ops.reemplazar(i) },
       '-',
+      {
+        txt: 'Eventos del cuadro…',
+        ico: 'rayo',
+        off: varios,
+        on: () => An.editarEventos(i)
+      },
       {
         txt: 'Duración',
         ico: 'tiempo',
@@ -499,6 +514,7 @@
         h('span.nro', String(i + 1)),
         CK.mini(c, Math.min(T - 8, 160)),
         d ? h('span.tl-dur', Math.round(d) + ' ms') : null,
+        a && An.insigniasEv ? An.insigniasEv(a, i) : null,
         a ? h('span.tl-borde') : null
       );
       cel.querySelector('canvas').style.width = cel.querySelector('canvas').style.height = Math.min(T - 8, 160) + 'px';
@@ -677,6 +693,7 @@
   An.pintarCentro = () => {
     An.st._v = (An.st._v || 0) + 1;
     if (!An.lineaEl) return;
+    if (An.vacio) An.vacio((An.st.modo === 'generar' && !An.st.base) || (An.st.modo === 'hoja' && !An.hojaA()));
     An.cacheKey = '';
     An.pintarLinea();
     if (An.vista) {

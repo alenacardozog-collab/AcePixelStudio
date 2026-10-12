@@ -1692,6 +1692,157 @@
     return r;
   };
 
+  // ---------------------------------------------------------------- girar y escalar sin romper el pixel art
+  /** Escala ×2 que respeta los bordes del pixel art (Scale2x / EPX). */
+  PIX.scale2x = im => {
+    const W = im.w,
+      H = im.h,
+      o = PIX.make(W * 2, H * 2),
+      d = im.d,
+      igual = (a, b) => d[a] === d[b] && d[a + 1] === d[b + 1] && d[a + 2] === d[b + 2] && d[a + 3] === d[b + 3];
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        const P = (y * W + x) * 4,
+          A = y > 0 ? P - W * 4 : P,
+          B = x < W - 1 ? P + 4 : P,
+          C = x > 0 ? P - 4 : P,
+          D = y < H - 1 ? P + W * 4 : P;
+        const e = [
+          igual(C, A) && !igual(C, D) && !igual(A, B) ? A : P,
+          igual(A, B) && !igual(A, C) && !igual(B, D) ? B : P,
+          igual(D, C) && !igual(D, B) && !igual(C, A) ? C : P,
+          igual(B, D) && !igual(B, A) && !igual(D, C) ? D : P
+        ];
+        for (let k = 0; k < 4; k++) {
+          const q = ((y * 2 + (k >> 1)) * W * 2 + x * 2 + (k & 1)) * 4;
+          o.d[q] = d[e[k]];
+          o.d[q + 1] = d[e[k] + 1];
+          o.d[q + 2] = d[e[k] + 2];
+          o.d[q + 3] = d[e[k] + 3];
+        }
+      }
+    return o;
+  };
+  /** La imagen agrandada ×8 con Scale2x tres veces (base de RotSprite). Se guarda para no rehacerla en cada movimiento. */
+  const ochos = new WeakMap();
+  PIX.ocho = im => {
+    let o = ochos.get(im);
+    if (!o) {
+      o = PIX.scale2x(PIX.scale2x(PIX.scale2x(im)));
+      ochos.set(im, o);
+    }
+    return o;
+  };
+  /**
+   * Gira y escala un dibujo de pixel art sin deformarlo (idea de RotSprite: se agranda ×8 respetando los bordes, se gira
+   * ahí y se vuelve al tamaño eligiendo, en cada píxel, el color que más aparece). Con giros rectos y escalas enteras
+   * se copia exacto. No inventa colores.
+   * t = { ang (radianes), sx, sy, cx, cy (centro en la salida), x0, y0, W, H (rectángulo de salida) }
+   * Devuelve { d: Uint8ClampedArray W*H*4, m: Uint8Array W*H (1 = hay dibujo) }.
+   */
+  PIX.transformarEn = (im, t) => {
+    const { ang, sx, sy, W, H } = t,
+      bw = im.w,
+      bh = im.h,
+      co = Math.cos(ang),
+      si = Math.sin(ang),
+      recto = Math.abs(Math.round(ang / (Math.PI / 2)) * (Math.PI / 2) - ang) < 1e-4,
+      entero = v => Math.abs(Math.abs(v) - Math.round(Math.abs(v))) < 1e-6 && Math.abs(v) >= 1,
+      exacto = recto && entero(sx) && entero(sy),
+      src = exacto ? im : PIX.ocho(im),
+      K = exacto ? 1 : 8,
+      out = new Uint8ClampedArray(W * H * 4),
+      m = new Uint8Array(W * H),
+      // muestras dentro de cada píxel de salida: el centro y ocho alrededor (votan el color)
+      sub = exacto
+        ? [[0, 0]]
+        : [
+            [0, 0],
+            [-0.3, -0.3],
+            [0.3, -0.3],
+            [-0.3, 0.3],
+            [0.3, 0.3],
+            [0, -0.33],
+            [0, 0.33],
+            [-0.33, 0],
+            [0.33, 0]
+          ],
+      sd = src.d,
+      sw = src.w,
+      sh = src.h;
+    const muestra = (fx, fy) => {
+      const dx = fx - t.cx,
+        dy = fy - t.cy,
+        u = (dx * co + dy * si) / sx + bw / 2,
+        v = (-dx * si + dy * co) / sy + bh / 2;
+      if (u < 0 || v < 0 || u >= bw || v >= bh) return -1;
+      const px = Math.min(sw - 1, Math.floor(u * K)),
+        py = Math.min(sh - 1, Math.floor(v * K)),
+        i = (py * sw + px) * 4;
+      return sd[i + 3] < 8 ? -1 : i;
+    };
+    const cuenta = new Map();
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        const fx = t.x0 + x + 0.5,
+          fy = t.y0 + y + 0.5;
+        let elegido;
+        if (sub.length === 1) elegido = muestra(fx, fy);
+        else {
+          cuenta.clear();
+          let mejor = -1,
+            nMejor = 0;
+          const centro = muestra(fx, fy);
+          for (const [ox, oy] of sub) {
+            const i = ox || oy ? muestra(fx + ox, fy + oy) : centro,
+              k = i < 0 ? -1 : (sd[i] << 24) | (sd[i + 1] << 16) | (sd[i + 2] << 8) | sd[i + 3];
+            const n = (cuenta.get(k) || 0) + 1;
+            cuenta.set(k, n);
+            if (n > nMejor || (n === nMejor && i === centro)) {
+              nMejor = n;
+              mejor = i;
+            }
+          }
+          elegido = mejor;
+        }
+        if (elegido < 0) continue;
+        const o = (y * W + x) * 4;
+        out[o] = sd[elegido];
+        out[o + 1] = sd[elegido + 1];
+        out[o + 2] = sd[elegido + 2];
+        out[o + 3] = sd[elegido + 3];
+        m[y * W + x] = 1;
+      }
+    return { d: out, m };
+  };
+  /** Gira y escala alrededor de un punto de apoyo (px, py en la imagen). Devuelve { im, ax, ay }: la imagen nueva y dónde quedó el apoyo. */
+  PIX.transformar = (im, ang, sx, sy, px, py) => {
+    const co = Math.cos(ang),
+      si = Math.sin(ang),
+      esq = [
+        [0, 0],
+        [im.w, 0],
+        [0, im.h],
+        [im.w, im.h]
+      ].map(([x, y]) => {
+        const lx = (x - im.w / 2) * sx,
+          ly = (y - im.h / 2) * sy;
+        return [lx * co - ly * si, lx * si + ly * co];
+      }),
+      x0 = Math.floor(Math.min(...esq.map(e => e[0])) + 1e-6),
+      y0 = Math.floor(Math.min(...esq.map(e => e[1])) + 1e-6),
+      x1 = Math.ceil(Math.max(...esq.map(e => e[0])) - 1e-6),
+      y1 = Math.ceil(Math.max(...esq.map(e => e[1])) - 1e-6),
+      W = Math.max(1, x1 - x0),
+      H = Math.max(1, y1 - y0),
+      r = PIX.transformarEn(im, { ang, sx, sy, cx: 0, cy: 0, x0, y0, W, H }),
+      o = { w: W, h: H, d: r.d };
+    // el apoyo (px, py de la imagen original) en la salida
+    const lx = (px - im.w / 2) * sx,
+      ly = (py - im.h / 2) * sy;
+    return { im: o, ax: lx * co - ly * si - x0, ay: lx * si + ly * co - y0 };
+  };
+
   if (typeof module !== 'undefined' && module.exports) module.exports = PIX;
   else root.PIX = PIX;
 })(typeof window !== 'undefined' ? window : globalThis);

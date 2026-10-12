@@ -322,6 +322,7 @@
     An.pasoFx(dt, i, cambio);
     if (cambio || (An.fxActivos() && An.rep.play)) An.vista.pedir();
     if (cambio) An.marcarActual();
+    if (cambio && An.rep.play && An.sonarEventos) An.sonarEventos(a, An.fisico(i));
     An.moverAguja(total);
   };
 })();

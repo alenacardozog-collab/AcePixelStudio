@@ -33,7 +33,197 @@
   const PR = () => window.EDITOR_PRUEBA || { imagenes: {}, paseantes: [] };
   const P = MainGameScene.prototype,
     Q = new URLSearchParams(location.search);
-  const ED = (window.CK_EDITOR = { datos: D, indice: {}, npcs: {}, enemigos: {}, fxPts: {}, vivos: [], chat: null, salto: null });
+  const ED = (window.CK_EDITOR = {
+    datos: D,
+    indice: {},
+    npcs: {},
+    enemigos: {},
+    fxPts: {},
+    luces: {},
+    vivos: [],
+    chat: null,
+    salto: null
+  });
+  // luces del editor (núcleo copiado de js/core/luces.js: mismo dibujo en el editor y en el juego)
+  /*<luz-nucleo>*/
+  var LUZ = (function () {
+    var cl = function (v, a, b) {
+      return v < a ? a : v > b ? b : v;
+    };
+    var hex = function (s) {
+      s = String(s || '#ffcc66').replace('#', '');
+      if (s.length === 3) s = s.replace(/./g, '$&$&');
+      var n = parseInt(s, 16) || 0;
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    };
+    var D = {
+      forma: 'punto',
+      radio: 48,
+      color: '#ffc46b',
+      color2: '',
+      fuerza: 0.55,
+      suave: 60,
+      nucleo: 0,
+      escalones: 0,
+      dir: 90,
+      apertura: 50,
+      ancho: 32,
+      alto: 16,
+      grosor: 30,
+      parpadeo: 0,
+      pulso: 0,
+      modo: 'suma'
+    };
+    var v = function (o, k) {
+      return o[k] === undefined || o[k] === null || o[k] === '' ? D[k] : o[k];
+    };
+    /** Distancia desde el centro hasta el borde del lienzo de la luz. */
+    var extension = function (o) {
+      var R = +v(o, 'radio'),
+        f = v(o, 'forma');
+      if (f === 'area') return R + Math.hypot(+v(o, 'ancho'), +v(o, 'alto')) / 2;
+      if (f === 'linea') return R + +v(o, 'ancho') / 2;
+      if (f === 'sol') return R + +v(o, 'ancho') + R * Math.tan((cl(+v(o, 'apertura'), 0, 120) * Math.PI) / 360);
+      return R;
+    };
+    /** Cuánta luz hay a una distancia u (0 = centro, 1 = borde). */
+    var perfil = function (u, o) {
+      var c = cl(+v(o, 'nucleo'), 0, 90) / 100,
+        s = cl(+v(o, 'suave'), 2, 100) / 100,
+        n = Math.round(+v(o, 'escalones'));
+      if (u <= c) return 1;
+      var uu = (u - c) / (1 - c);
+      if (uu >= 1) return 0;
+      var a = cl((1 - uu) / s, 0, 1),
+        r = a * a * (3 - 2 * a) * Math.pow(1 - uu, s * 1.2);
+      if (n >= 2) r = r > 0.02 ? Math.ceil(r * n) / n : 0;
+      return r;
+    };
+    var suaveAng = function (ang, a, s) {
+      var tw = Math.max(0.03, a * s),
+        t = cl((a + tw / 2 - ang) / tw, 0, 1);
+      return t * t * (3 - 2 * t);
+    };
+    /** Valor (0..1) y mezcla de color (0 = centro, 1 = borde) en un punto relativo al centro de la luz. */
+    var muestra = function (o, dx, dy) {
+      var f = v(o, 'forma'),
+        R = Math.max(1, +v(o, 'radio')),
+        // rectángulo y tira: sin dirección quedan acostados (0°); foco y haz apuntan abajo (90°)
+        d = (((f === 'area' || f === 'linea') && (o.dir === undefined || o.dir === '') ? 0 : +v(o, 'dir')) * Math.PI) / 180,
+        co = Math.cos(d),
+        si = Math.sin(d),
+        lx = dx * co + dy * si,
+        ly = -dx * si + dy * co,
+        s = cl(+v(o, 'suave'), 2, 100) / 100,
+        u,
+        k = 1;
+      if (f === 'foco') {
+        var r = Math.hypot(dx, dy),
+          a = (cl(+v(o, 'apertura'), 2, 359) * Math.PI) / 360;
+        u = r / R;
+        k = suaveAng(Math.abs(Math.atan2(ly, lx)), a, s);
+        var fuente = perfil(r / Math.max(2, R * 0.12), o) * 0.8;
+        var val = Math.max(perfil(u, o) * k, fuente);
+        return [val, cl(u, 0, 1)];
+      }
+      if (f === 'sol') {
+        var W = Math.max(1, +v(o, 'ancho')),
+          sp = Math.tan((cl(+v(o, 'apertura'), 0, 120) * Math.PI) / 360),
+          t = lx,
+          hw = W / 2 + Math.max(0, t) * sp;
+        if (t < 0) u = Math.hypot(t, ly) / (W / 2);
+        else u = Math.abs(ly) / hw;
+        var largo = t <= 0 ? 1 : Math.pow(cl(1 - t / R, 0, 1), 0.8);
+        return [perfil(u, o) * largo, cl(t / R, 0, 1)];
+      }
+      if (f === 'area') {
+        var ex = Math.max(Math.abs(lx) - +v(o, 'ancho') / 2, 0),
+          ey = Math.max(Math.abs(ly) - +v(o, 'alto') / 2, 0);
+        u = Math.hypot(ex, ey) / R;
+      } else if (f === 'linea') {
+        u = Math.hypot(Math.max(Math.abs(lx) - +v(o, 'ancho') / 2, 0), ly) / R;
+      } else if (f === 'anillo') {
+        var g = cl(+v(o, 'grosor'), 5, 100) / 100,
+          w = Math.max(1, (R * g) / 2),
+          rc = R - w;
+        u = Math.abs(Math.hypot(dx, dy) - rc) / w;
+      } else u = Math.hypot(dx, dy) / R;
+      return [perfil(u, o) * k, cl(u, 0, 1)];
+    };
+    var CLAVES = ['forma', 'radio', 'color', 'color2', 'suave', 'nucleo', 'escalones', 'dir', 'apertura', 'ancho', 'alto', 'grosor'];
+    var claveDe = function (o) {
+      return CLAVES.map(function (k) {
+        return v(o, k);
+      }).join('|');
+    };
+    var cache = {},
+      nCache = 0;
+    /** Lienzo con la luz dibujada (sin intensidad ni parpadeo: eso se aplica al dibujarla). e = medio lado en píxeles del mundo. */
+    var textura = function (o, crear) {
+      var k = claveDe(o);
+      if (cache[k]) return cache[k];
+      var E = Math.ceil(extension(o)),
+        duro = +v(o, 'escalones') >= 2 || +v(o, 'suave') < 15,
+        esc = Math.min(1, (duro ? 640 : 320) / (2 * E)),
+        n = Math.max(2, Math.ceil(2 * E * esc)),
+        c = crear ? crear(n, n) : document.createElement('canvas');
+      c.width = n;
+      c.height = n;
+      var x = c.getContext('2d'),
+        im = x.createImageData(n, n),
+        p = im.data,
+        c1 = hex(v(o, 'color')),
+        c2 = v(o, 'color2') ? hex(v(o, 'color2')) : c1;
+      for (var j = 0; j < n; j++)
+        for (var i = 0; i < n; i++) {
+          var m = muestra(o, ((i + 0.5) / n) * 2 * E - E, ((j + 0.5) / n) * 2 * E - E),
+            a = m[0];
+          if (a <= 0.002) continue;
+          var t = m[1],
+            q = (j * n + i) * 4;
+          p[q] = c1[0] + (c2[0] - c1[0]) * t;
+          p[q + 1] = c1[1] + (c2[1] - c1[1]) * t;
+          p[q + 2] = c1[2] + (c2[2] - c1[2]) * t;
+          p[q + 3] = cl(a, 0, 1) * 255;
+        }
+      x.putImageData(im, 0, 0);
+      var r = { c: c, e: E, duro: duro, clave: k, id: ++nCache };
+      cache[k] = r;
+      return r;
+    };
+    /** Multiplicadores de tamaño y brillo en el instante t (milisegundos). */
+    var vida = function (o, t) {
+      var p = +v(o, 'parpadeo'),
+        pu = +v(o, 'pulso'),
+        tam = p ? 1 + Math.sin(t / 90 + (o.x || 0)) * 0.06 * p + Math.sin(t / 37 + (o.y || 0)) * 0.04 * p : 1,
+        bri = pu ? 1 - (pu / 4) * 0.55 * (0.5 + 0.5 * Math.sin((t / 1000) * Math.PI * (0.6 + pu * 0.15))) : 1;
+      return [tam, bri];
+    };
+    /** Dibuja la luz en (x, y) de un contexto en coordenadas del mundo. */
+    var dibujar = function (ctx, o, t, x, y) {
+      var tx = textura(o),
+        vi = vida(o, t || 0),
+        e = tx.e * vi[0];
+      ctx.save();
+      ctx.globalCompositeOperation = v(o, 'modo') === 'suave' ? 'screen' : 'lighter';
+      ctx.globalAlpha = cl(+v(o, 'fuerza') * vi[1], 0, 1);
+      ctx.imageSmoothingEnabled = !tx.duro;
+      ctx.drawImage(tx.c, (x === undefined ? o.x : x) - e, (y === undefined ? o.y : y) - e, e * 2, e * 2);
+      ctx.restore();
+    };
+    return {
+      D: D,
+      v: v,
+      extension: extension,
+      perfil: perfil,
+      muestra: muestra,
+      textura: textura,
+      vida: vida,
+      dibujar: dibujar,
+      clave: claveDe
+    };
+  })();
+  /*</luz-nucleo>*/
   const propios = Object.keys(D.mapas).filter(id => !D.mapas[id].origen);
   const hexInt = h => parseInt(String(h || '#ffffff').replace('#', ''), 16);
   const mezcla = (hex, k) => {
@@ -163,6 +353,7 @@
     const zona = zonaDe(id);
     ED.npcs[zona] = (m.npcs || []).slice();
     ED.fxPts[zona] = (m.fx || []).slice();
+    ED.luces[zona] = (m.luces || []).filter(l => l.forma);
     ED.enemigos[zona] = (m.enemigos || []).filter(e => e.ruta && e.ruta.length > 1);
     const sueltos = (m.enemigos || []).filter(e => !(e.ruta && e.ruta.length > 1) && ENEMY_TYPES[e.tipo]);
     if ((m.enemigos || []).length)
@@ -194,10 +385,14 @@
         const it = { key, x, baseY: y, scale: (o && o.escala) || 1, flipX: !!flip, shadow: 0, fallback: { w: 16, h: 16, color: 0x6b6258 } };
         if (anim) it.anim = anim;
         if (o && o.piso) it.floor = true;
+        // objetos girados o estirados en el editor: vienen horneados, con su punto de apoyo
+        if (o && o.ox !== undefined) it.ox = o.ox;
+        if (o && o.oy !== undefined) it.oy = o.oy;
         a.items.push(it);
       });
       (m.cols || []).forEach(([x, y, w, h]) => a.colliders.push({ x, y, w, h }));
       (m.luces || []).forEach(l => {
+        if (l.forma) return; // las luces nuevas se dibujan al entrar a la zona (ver ckLuces)
         const c = hexInt(l.color),
           f = l.fuerza === undefined ? 0.5 : l.fuerza;
         kit.light(a, l.x, l.y + 4, l.radio, c, f * 0.55);
@@ -282,6 +477,59 @@
     });
     (ED.fxPts[area.key] || []).forEach(p => {
       if (D.fx && D.fx[p.fx]) this.ckFx(p.fx, area.x + p.x, area.y + p.y, { fijo: true });
+    });
+    try {
+      this.ckLuces(area);
+    } catch (e) {
+      console.warn('[Taller] luces:', e);
+    }
+  };
+  /** Luces nuevas del editor (foco, rectángulo, tira, anillo, haz, suavizado, escalones, pulso, sigue al héroe). */
+  let nLuz = 0;
+  const texLuz = {};
+  P.ckLuces = function (area) {
+    ED.lucesVivas = [];
+    (ED.luces[area.key] || []).forEach(l => {
+      const tx = LUZ.textura(l),
+        key = texLuz[tx.clave] || (texLuz[tx.clave] = 'ckluz_' + ++nLuz);
+      if (!this.textures.exists(key)) this.textures.addCanvas(key, tx.c);
+      const f = l.fuerza === undefined ? 0.55 : l.fuerza,
+        im = this.add
+          .image(area.x + l.x, area.y + l.y, key)
+          .setBlendMode(l.modo === 'suave' ? Phaser.BlendModes.SCREEN : Phaser.BlendModes.ADD)
+          .setAlpha(f)
+          .setDisplaySize(tx.e * 2, tx.e * 2)
+          .setDepth(l.encima ? area.y + area.h + 50 : 7.26);
+      // el juego es pixelArt (todo sin suavizar): las luces suaves se suavizan igual, las de escalones no
+      if (im.texture && im.texture.setFilter)
+        im.texture.setFilter(tx.duro ? Phaser.Textures.FilterMode.NEAREST : Phaser.Textures.FilterMode.LINEAR);
+      ED.vivos.push({ img: im, key: null });
+      ED.lucesVivas.push({ im, l, area, e: tx.e, t0: Math.random() * 1000 });
+    });
+  };
+  /** Cada cuadro: parpadeo, pulso y luces que siguen al héroe. */
+  const lucesCuadro = s => {
+    const vivas = ED.lucesVivas;
+    if (!vivas || !vivas.length) return;
+    const t = s.time.now,
+      pl = s.player,
+      b = pl && pl.body;
+    vivas.forEach(v => {
+      if (!v.im.active) return;
+      const l = v.l,
+        vi = LUZ.vida(l, t + v.t0),
+        f = l.fuerza === undefined ? 0.55 : l.fuerza;
+      v.im.setAlpha(Math.min(1, f * vi[1]));
+      if (vi[0] !== 1) v.im.setDisplaySize(v.e * 2 * vi[0], v.e * 2 * vi[0]);
+      if (l.sigue === 'heroe' && b) {
+        v.im.setPosition(b.center.x, b.center.y - 4);
+        if (l.mira) {
+          const vx = b.velocity.x,
+            vy = b.velocity.y;
+          if (Math.abs(vx) + Math.abs(vy) > 5) v.ang = Math.atan2(vy, vx);
+          if (v.ang !== undefined) v.im.setRotation(v.ang - ((l.dir === undefined ? 90 : l.dir) * Math.PI) / 180);
+        }
+      }
     });
   };
   const villageShown0 = P.onVillageShown;
@@ -1078,11 +1326,51 @@
       } catch (e) {}
       return campana0.apply(this, arguments);
     };
+  // ------------------------------------------------------------------ eventos por cuadro de las animaciones del editor
+  // (Animar → clic derecho en un cuadro → "Eventos del cuadro"): sonido, efecto, golpe o aviso en el cuadro exacto.
+  // El juego puede escuchar: escena.events.on('ck_golpe', sprite => …) y escena.events.on('ck_evento', (nombre, sprite) => …).
+  window.CK_EVENTOS = []; // registro de los últimos eventos (lo usan las pruebas)
+  const dispararEv = (spr, lista, key, i) => {
+    const s = spr && spr.scene;
+    lista.forEach(e => {
+      try {
+        if (e.t === 'sonido' && e.n && typeof sfx !== 'undefined') sfx.fx(e.n, e.v === undefined ? 0.7 : e.v);
+        else if (e.t === 'fx' && e.id && s && s.ckFx)
+          s.ckFx(e.id, spr.x + (spr.flipX ? -(e.x || 0) : e.x || 0), spr.y + (e.y || 0), { depth: (spr.depth || 0) + 1 });
+        else if (e.t === 'golpe') {
+          spr.emit('ck_golpe', spr);
+          if (s) s.events.emit('ck_golpe', spr);
+        } else if (e.t === 'aviso' && e.n) {
+          spr.emit('ck_evento', e.n, spr);
+          if (s) s.events.emit('ck_evento', e.n, spr);
+        }
+        window.CK_EVENTOS.push({ key, cuadro: i, t: e.t, n: e.n || e.id || '' });
+        if (window.CK_EVENTOS.length > 50) window.CK_EVENTOS.shift();
+      } catch (er) {}
+    });
+  };
+  if (typeof Phaser !== 'undefined' && Phaser.Animations && Phaser.Animations.AnimationState) {
+    const AS = Phaser.Animations.AnimationState.prototype,
+      setFrame0 = AS.setCurrentFrame;
+    AS.setCurrentFrame = function (af) {
+      const r = setFrame0.apply(this, arguments);
+      try {
+        const an = this.currentAnim,
+          EVS = D.eventos,
+          lista = EVS && an && af && (EVS[an.key] || EVS[af.textureKey]),
+          i = af ? parseInt(af.textureFrame, 10) : NaN,
+          ev = lista && !isNaN(i) ? lista[i] : null;
+        if (ev && ev.length) dispararEv(this.parent, ev, an.key, i);
+      } catch (e) {}
+      return r;
+    };
+  }
   const update0 = P.update;
   P.update = function () {
     const r = update0.apply(this, arguments);
     try {
       if (this._gameMode !== 'campaign') PRAC.cuadro(this);
+      lucesCuadro(this);
       const enAldea = this._gameMode === 'campaign' && !this.currentInterior;
       (ED.paseantes || []).forEach(w => {
         if (w.sp.visible !== enAldea) w.sp.setVisible(enAldea);
